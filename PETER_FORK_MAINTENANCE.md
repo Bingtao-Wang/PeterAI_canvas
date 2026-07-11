@@ -23,6 +23,7 @@
 - PeterAI API Key 只驻留内存，不能进入 localStorage、IndexedDB、导出 ZIP 或 WebDAV。
 - 所有业务存储使用后端用户 ID 命名空间 `peterai-canvas:<user-id>`。
 - PeterAI 渠道只调用当前域名的 `/peter-api`，不能绕过 Sub2API 直连真实上游。
+- Canvas 不提供独立注册或登录；所有业务用户必须先通过 PeterAI JWT 验证。用户主动配置的自有 URL/API Key 渠道继续保留，并明确标记为非 PeterAI 托管。
 - 图片模型和价格来自 `/user/image-generation/options`；价格缺失时显示“以实际扣费为准”。
 - 非图片模型必须同时出现在 Key 的 `/v1/models` 和 `/channels/available` 分组元数据中；无法可靠分类的模型不进入默认列表。
 - 生图每个请求固定 `n=1`，浏览器队列最多 4 并发；失败结果不允许发布 Gallery。
@@ -82,9 +83,17 @@ Sub2API 管理设置中的 `available_channels_enabled` 必须开启，否则 `/
 
 ### 当前 Sub2API 能力边界
 
-截至基线 `ebd8ae2` 接入时，本地 Sub2API 真实路由已验证支持 Models、Responses、Images 和 Grok 视频的 `POST /v1/videos/generations`、`GET /v1/videos/:id`。Canvas Nginx 将公开的 `POST /peter-api/v1/videos` 精确改写到该创建路由；Peter managed adapter 必须发送 Sub2API/xAI JSON 字段 `model`、`prompt`、`duration`、`resolution` 和可选单张 `image.image_url`，并兼容创建响应的 `request_id` 与轮询响应的 `video.url`。
+Sub2API 真实路由支持 Models、Responses、Images、Grok 视频，以及 PeterAI 托管媒体端点：
 
-当前 Sub2API 尚无 `/v1/audio/speech`、Seedance tasks 和视频 `/content` 路由，因此 PeterAI 托管渠道不默认暴露音频或 Seedance 模型；网页原有音频、Seedance 和其他完整能力仍可通过用户手工第三方渠道使用。只有 Sub2API 后端增加并验证对应路由后，才能放开托管模型分类，禁止仅靠前端或 Nginx 宣称支持。
+```text
+POST /v1/audio/speech
+POST /v1/contents/generations/tasks
+GET  /v1/contents/generations/tasks/:task_id
+```
+
+Audio/Seedance 账号必须是 OpenAI APIKey 类型，并由管理员显式勾选 `audio_speech` 或 `seedance` 能力；没有显式能力时调度器必须拒绝。Audio 必须有独立 `per_request` 默认价格；Seedance 必须有按分辨率的渠道按次价或分组视频每秒价，自动时长只能使用按次价，避免按猜测秒数扣费。缺账号能力或价格时接口返回明确错误，不允许误选普通 Codex 账号、按零价放行或使用图片默认价格。Seedance 创建成功后绑定 task 与账号，轮询沿用相同账号。
+
+Canvas Nginx 将公开的 `POST /peter-api/v1/videos` 精确改写到 Grok 创建路由；Peter managed adapter 必须发送 Sub2API/xAI JSON 字段 `model`、`prompt`、`duration`、`resolution` 和可选单张 `image.image_url`，并兼容创建响应的 `request_id` 与轮询响应的 `video.url`。视频 `/content` 仍未实现，PeterAI 适配器只接受状态响应中的可下载 URL。用户手工 URL/API Key 渠道保持上游原直连行为，不经过 `/peter-api`。
 
 先发布并验证 Canvas，再通过 Sub2API 管理设置添加或恢复菜单。Cloudflare Tunnel 路由为：
 

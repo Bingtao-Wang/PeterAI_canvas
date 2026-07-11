@@ -48,6 +48,12 @@ responses_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0
 [[ "$responses_create" == "401" ]]
 image_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:13000/peter-api/v1/images/generations)"
 [[ "$image_create" == "401" ]]
+audio_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:13000/peter-api/v1/audio/speech)"
+[[ "$audio_create" == "401" ]]
+seedance_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:13000/peter-api/v1/contents/generations/tasks)"
+[[ "$seedance_create" == "401" ]]
+seedance_status="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:13000/peter-api/v1/contents/generations/tasks/peter-probe)"
+[[ "$seedance_status" == "401" ]]
 
 echo "== exact source commit =="
 EXPECTED_SOURCE_REF="${EXPECTED_SOURCE_REF:-$(git -C "$ROOT_DIR" rev-parse HEAD)}"

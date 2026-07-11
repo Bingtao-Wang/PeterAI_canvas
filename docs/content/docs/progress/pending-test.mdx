@@ -7,7 +7,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 
 - PeterAI 接入：验证 iframe JWT 初始化后地址清理、刷新 session 恢复、恶意 `src_host` 拒绝和 401 会话清理。
 - PeterAI 数据隔离：使用同一浏览器依次登录两个用户，确认画布、素材、媒体、生成记录、WebDAV 和 Agent 配置互不串读，持久化数据中不存在 PeterAI Key/JWT。
-- PeterAI 多能力渠道：开启 Sub2API `available_channels_enabled` 后验证全部有效 Key 的模型交集导入、图片/文本/Grok 视频分类，以及单 Key 模型加载失败不阻塞其他 Key；音频和 Seedance 在 Sub2API 增加真实路由前仅验证手工第三方渠道。
+- PeterAI 多能力渠道：为 Sub2API 账号显式开启 `audio_speech` / `seedance` 能力并配置独立价格后，验证全部有效 Key 的模型交集导入、图片/文本/Grok/Seedance/音频分类，以及单 Key 模型加载失败不阻塞其他 Key；选择 PeterAI 托管模型时请求和扣费必须只进入 Sub2API，用户手工 URL/API Key 渠道仍按原直连行为工作。
 - PeterAI 生图：验证动态 1K/2K/4K 预计价格、未知价格提示、每请求 `n=1`、最多四并发、部分失败和 Gallery 发布。
 - PeterAI Grok 视频：验证 JSON 创建请求的时长、分辨率、单张参考图、`request_id` 轮询以及 `video.url` 下载/播放；多参考图应在请求前给出明确提示。
 - PeterAI 部署：验证 `canvas.peterai.cc.cd` iframe、安全响应头、100MB 参考图、120 秒代理超时、代理白名单、Cloudflare Tunnel 和回滚。

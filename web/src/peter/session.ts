@@ -140,11 +140,10 @@ async function loadManagedChannels(token: string): Promise<PeterManagedChannel[]
         const imageModels = unique((imageOption?.models || []).filter((model) => fetchedModels.includes(model)));
         const groupMetadata = supportedByGroup.get(groupId);
         const intersected = groupMetadata ? fetchedModels.filter((model) => groupMetadata.models.has(model) && !imageModels.includes(model)) : [];
-        const remaining = intersected.filter((model) => !isAudioModel(model) && (!isVideoModel(model) || groupMetadata?.platform === "grok"));
-        const videoModels = groupMetadata?.platform === "grok" ? remaining.filter(isVideoModel) : [];
-        const audioModels: string[] = [];
-        const textModels = remaining.filter((model) => !videoModels.includes(model) && !audioModels.includes(model) && isTextModel(model));
-        const visibleModels = unique([...imageModels, ...remaining]);
+        const videoModels = intersected.filter(isVideoModel);
+        const audioModels = intersected.filter(isAudioModel);
+        const textModels = intersected.filter((model) => !videoModels.includes(model) && !audioModels.includes(model) && isTextModel(model));
+        const visibleModels = unique([...imageModels, ...intersected]);
         if (!visibleModels.length) return null;
         return {
             id: `peter-${key.id}`,

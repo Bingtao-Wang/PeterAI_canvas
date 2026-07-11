@@ -96,14 +96,14 @@ describe("PeterAI bootstrap", () => {
                     ] } });
                 if (url.includes("/image-generation/options")) return json({ code: 0, data: { keys: [{ id: 1, key: "image-key", name: "Image", group_id: 7, group_name: "OpenAI", models: ["gpt-image-2"], prices_by_model: { "gpt-image-2": { "1K": 0.1 } } }] } });
                 if (url.includes("/channels/available")) return json({ code: 0, data: [{ platforms: [
-                    { platform: "openai", groups: [{ id: 7 }], supported_models: [{ name: "gpt-5.5" }, { name: "mystery-model" }, { name: "gpt-4o-mini-tts" }] },
+                    { platform: "openai", groups: [{ id: 7 }], supported_models: [{ name: "gpt-5.5" }, { name: "mystery-model" }, { name: "gpt-4o-mini-tts" }, { name: "doubao-seedance-2-0-pro" }] },
                     { platform: "grok", groups: [{ id: 8 }], supported_models: [{ name: "grok-imagine-video-1.5" }, { name: "grok-4" }] },
                 ] }] });
                 if (url.includes("/v1/models")) {
                     const authorization = (init?.headers as Record<string, string> | undefined)?.Authorization;
                     if (authorization === "Bearer broken-key") return json({ error: { message: "invalid key" } }, 401);
                     return json({ data: authorization === "Bearer image-key"
-                        ? [{ id: "gpt-image-2" }, { id: "gpt-5.5" }, { id: "mystery-model" }, { id: "gpt-4o-mini-tts" }]
+                        ? [{ id: "gpt-image-2" }, { id: "gpt-5.5" }, { id: "mystery-model" }, { id: "gpt-4o-mini-tts" }, { id: "doubao-seedance-2-0-pro" }]
                         : [{ id: "grok-imagine-video-1.5" }, { id: "grok-4" }] });
                 }
                 throw new Error(`unexpected request ${url}`);
@@ -112,10 +112,10 @@ describe("PeterAI bootstrap", () => {
 
         const session = await bootstrapPeterSession();
         expect(session.channels).toHaveLength(2);
-        expect(session.channels[0].capabilities).toEqual({ image: ["gpt-image-2"], video: [], audio: [], text: ["gpt-5.5"] });
+        expect(session.channels[0].capabilities).toEqual({ image: ["gpt-image-2"], video: ["doubao-seedance-2-0-pro"], audio: ["gpt-4o-mini-tts"], text: ["gpt-5.5"] });
         expect(session.channels[0].models).toContain("mystery-model");
         expect(session.channels[0].capabilities.text).not.toContain("mystery-model");
-        expect(session.channels[0].models).not.toContain("gpt-4o-mini-tts");
+        expect(session.channels[0].models).toContain("gpt-4o-mini-tts");
         expect(session.channels[1].capabilities.video).toEqual(["grok-imagine-video-1.5"]);
         expect(session.channels[1].capabilities.text).toEqual(["grok-4"]);
 
