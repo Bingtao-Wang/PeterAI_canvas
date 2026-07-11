@@ -7,7 +7,8 @@
 | 上游 | `basketikun/infinite-canvas@ebd8ae2`（根版本 `v0.6.0` 后的 main） |
 | 生产分支 | `custom/peterai` |
 | 上游镜像分支 | `main`，只跟踪 `upstream/main` |
-| 公共源码 | `https://github.com/Bingtao-Wang/peterai-canvas` |
+| 公共源码 | `https://github.com/Bingtao-Wang/PeterAI_canvas` |
+| GHCR 镜像包 | `ghcr.io/bingtao-wang/peterai-canvas`（稳定逻辑名称，有意与仓库下划线命名不同） |
 | 生产域名 | `https://canvas.peterai.cc.cd` |
 | 本机入口 | `http://127.0.0.1:13000` |
 | Sub2API | `http://127.0.0.1:18080`，只经 `/peter-api` 白名单代理 |

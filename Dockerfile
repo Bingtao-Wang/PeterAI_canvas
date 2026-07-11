@@ -3,7 +3,7 @@ FROM oven/bun:1.3.13 AS web-build
 
 WORKDIR /app/web
 ARG PETER_SOURCE_REF=custom/peterai
-ENV VITE_SOURCE_URL=https://github.com/Bingtao-Wang/peterai-canvas/tree/${PETER_SOURCE_REF}
+ENV VITE_SOURCE_URL=https://github.com/Bingtao-Wang/PeterAI_canvas/tree/${PETER_SOURCE_REF}
 COPY web/package.json web/bun.lock ./
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --cache-dir=/root/.bun/install/cache
 COPY VERSION /app/VERSION

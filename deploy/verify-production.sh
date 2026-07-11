@@ -51,7 +51,7 @@ image_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1
 
 echo "== exact source commit =="
 EXPECTED_SOURCE_REF="${EXPECTED_SOURCE_REF:-$(git -C "$ROOT_DIR" rev-parse HEAD)}"
-docker exec peterai-canvas sh -lc "grep -R -q 'peterai-canvas/tree/$EXPECTED_SOURCE_REF' /usr/share/nginx/html"
+docker exec peterai-canvas sh -lc "grep -R -q 'PeterAI_canvas/tree/$EXPECTED_SOURCE_REF' /usr/share/nginx/html"
 
 if [[ "${VERIFY_PUBLIC:-0}" == "1" ]]; then
   echo "== public canvas =="
