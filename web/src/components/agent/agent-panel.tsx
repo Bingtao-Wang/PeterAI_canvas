@@ -1,20 +1,23 @@
 import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Bot, PanelRightClose } from "lucide-react";
-import { Button, Switch, Tooltip } from "antd";
+import { Button, Segmented, Switch, Tooltip } from "antd";
 import { motion } from "motion/react";
 
 import { CanvasLocalAgentPanel } from "@/components/canvas/canvas-local-agent-panel";
+import { WebAgentPanel } from "@/components/agent/web-agent-panel";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { CANVAS_AGENT_PANEL_MOTION_MS, useAgentStore } from "@/stores/use-agent-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { scopedStorageKey } from "@/peter/storage-scope";
 
 const PANEL_MOTION_SECONDS = CANVAS_AGENT_PANEL_MOTION_MS / 1000;
+type AgentMode = "web" | "local";
 
 export function AgentPanel() {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const width = useAgentStore((state) => state.width);
     const [resizing, setResizing] = useState(false);
+    const [mode, setMode] = useState<AgentMode>(() => (localStorage.getItem(scopedStorageKey("agent-mode")) === "local" ? "local" : "web"));
     const panelMounted = useAgentStore((state) => state.panelMounted);
     const panelOpen = useAgentStore((state) => state.panelOpen);
     const panelClosing = useAgentStore((state) => state.panelClosing);
@@ -22,6 +25,10 @@ export function AgentPanel() {
     const setAgentState = useAgentStore((state) => state.setAgentState);
     const closePanel = useAgentStore((state) => state.closePanel);
 
+    const changeMode = (mode: AgentMode) => {
+        setMode(mode);
+        localStorage.setItem(scopedStorageKey("agent-mode"), mode);
+    };
 
     const startResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -68,10 +75,21 @@ export function AgentPanel() {
                         </span>
                         <div className="min-w-0">
                             <div className="text-base font-semibold leading-5">Agent</div>
-                            <div className="truncate text-xs" style={{ color: theme.node.muted }}>全站助手</div>
+                            <div className="truncate text-xs" style={{ color: theme.node.muted }}>
+                                {mode === "web" ? "网站模型" : "本地 Codex"}
+                            </div>
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                        <Segmented<AgentMode>
+                            size="small"
+                            value={mode}
+                            options={[
+                                { label: "网站", value: "web" },
+                                { label: "本机", value: "local" },
+                            ]}
+                            onChange={changeMode}
+                        />
                         <label className="flex items-center gap-1.5 text-xs" style={{ color: theme.node.muted }}>
                             <Switch size="small" checked={confirmTools} onChange={(confirmTools) => setAgentState({ confirmTools })} />
                             工具确认
@@ -81,7 +99,7 @@ export function AgentPanel() {
                         </Tooltip>
                     </div>
                 </header>
-                <CanvasLocalAgentPanel embedded />
+                {mode === "web" ? <WebAgentPanel /> : <CanvasLocalAgentPanel embedded />}
             </motion.aside>
         </motion.div>
     );

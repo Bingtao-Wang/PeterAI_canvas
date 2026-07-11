@@ -8,6 +8,7 @@
 + [修复] PeterAI Grok 视频改用 Sub2API 已验证的 JSON 创建契约，并兼容 `request_id`、`done` 和嵌套视频 URL 响应。
 + [新增] PeterAI 托管渠道新增 Audio Speech 与 Seedance 模型分类，统一经 Sub2API 路由和站内计费；用户手工 URL/API Key 渠道继续保留。
 + [修复] 手工填写 PeterAI API 域名时自动使用同源 `/peter-api`，避免浏览器 CORS 失败；PeterAI 嵌入页不再默认弹出可选本地 Agent，并明确区分 Agent token 与 API Key。
++ [新增] Agent 恢复“网站 / 本机”模式：网站模式直接使用渠道 URL、API Key 和文本模型调用 Responses 并执行画布/站点工具，本机模式继续连接 Canvas Agent。
 
 + [优化] 本地 Agent 连接说明明确区分插件 / 手动 MCP 才会增加 Codex token 消耗，直接运行 Agent 不受影响。
 + [优化] 优化本地 Agent 连接说明，区分 Codex 插件启动和直接运行 Agent 两种方式。
@@ -17,7 +18,7 @@
 + [新增] Agent 新增 `site_navigate` 工具，支持从对话中直接跳转首页、画布、工作台、素材和配置等页面。
 + [新增] Agent 对话运行中支持一键停止，发送按钮切换为红色停止按钮并中断当前 Codex turn。
 + [调整] Codex 会话改为站点级连续线程，不再按画布 ID 分隔，跨页面和跨画布保持同一上下文。
-+ [调整] 移除仅前端调用 OpenAI responses 接口的在线画布助手旧逻辑，统一走 MCP + 本地 Codex 链路。
++ [调整] 网站 Agent 与本机 Codex Agent 复用全站右侧面板，并明确隔离 API Key 与本机 Connect token 的配置入口。
 + [新增] 画布节点支持统一维护名称字段，默认显示在节点上方，并可直接双击名称编辑。
 + [新增] 画布新增组节点，支持节点拖入/拆出分组、拖拽高亮吸附和移动组时带动子节点。
 + [调整] 画布节点顶部工具条改为点击选中节点后显示，避免鼠标经过节点时频繁弹出。

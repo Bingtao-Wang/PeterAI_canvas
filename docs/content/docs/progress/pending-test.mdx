@@ -11,6 +11,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 - PeterAI 生图：验证动态 1K/2K/4K 预计价格、未知价格提示、每请求 `n=1`、最多四并发、部分失败和 Gallery 发布。
 - PeterAI Grok 视频：验证 JSON 创建请求的时长、分辨率、单张参考图、`request_id` 轮询以及 `video.url` 下载/播放；多参考图应在请求前给出明确提示。
 - PeterAI 部署：验证 `canvas.peterai.cc.cd` iframe、安全响应头、100MB 参考图、120 秒代理超时、代理白名单、Cloudflare Tunnel 和回滚。
+- PeterAI 网站 Agent：右侧面板恢复“网站 / 本机”切换；网站模式应显示渠道 Base URL、默认文本模型和“配置 URL / API Key”入口，PeterAI 域名请求必须走同源 `/peter-api/v1/responses` 并计入站内 usage，手工第三方渠道保持浏览器直连；验证工具确认/拒绝、画布操作、站点工具、停止请求和用户隔离的模式偏好。
 
 - 本地 Agent 连接说明：新增提醒说明只有安装 Codex 插件或手动添加 MCP 后才会增加 Codex token 消耗，直接运行 `npx -y @basketikun/canvas-agent` 不会安装 MCP；需验证文案位置清晰。
 - 本地 Agent 连接说明：画布面板和配置页 Codex Tab 改为区分“Codex 插件启动画布”和“直接运行 Agent 后网页连接”两种方式，需验证文案和布局清晰。
@@ -18,7 +19,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 - 全站 Agent：新增 `site_navigate` 工具，Agent 可直接跳转 `/`、`/canvas`、`/canvas/:id`、`/image`、`/video`、`/prompts`、`/assets`、`/config`；导航直接执行不走工具确认，需验证跳转正确且面板不消失。
 - 全站 Agent：画布工具（canvas_apply_ops 等）仅在当前处于画布页时可用，不在画布页调用会返回“当前不在画布页，请先用 site_navigate 打开画布”，需验证 Agent 会先导航到画布再执行画布操作。
 - 全站 Agent：Codex 会话改为单一站点级连续线程（不再按 canvasId 分），跨页面/跨画布保持同一条对话上下文，历史记录即这条线程；本地 Agent workspace 从按画布分改为固定 `site` workspace（`~/.infinite-canvas/codex-workspaces/site`），已装 `@basketikun/canvas-agent` 的用户需更新到新版本才生效。
-- 全站 Agent：移除仅前端调用 OpenAI responses 接口的在线画布助手死代码（含 `requestToolResponse`），Agent 统一走 MCP + 本地 Codex 链路。
+- 全站 Agent：网站模式恢复前端 Responses 工具循环，本机模式继续走 MCP + 本地 Codex；两种模式切换时对话和连接配置不得混用。
 - 画布节点名称：每个节点保留 `title` 名称字段，默认名称显示在节点上方，双击名称可直接编辑，节点信息弹窗和 JSON 可查看该字段。
 - 画布节点工具条：节点顶部工具条改为点击选中节点后显示，单纯鼠标移入 / 移出节点不应再频繁弹出。
 - 画布组节点：组内子节点优先响应点击和拖拽；当鼠标位于组内节点上时，应移动 / 编辑该节点，而不是移动整个组。
@@ -32,7 +33,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 - Codex 全局连接：配置页可直接连接本地 Canvas Agent，连接状态同步到画布和顶部 OpenAI 状态图标，刷新后会按本地保存的地址和 token 自动尝试重连；需验证已连接、连接中、连接失败、断开和刷新自动重连状态。
 - 画布 Agent：Codex 旧 thread 在重启后不可用时会自动新建会话并重试，需验证进入画布直接发送消息不会再出现 `thread not loaded` 或 `no rollout found`。
 - 画布 Agent：切换不同画布时会清空并重新加载当前 canvasId 对应的 Codex 会话，需验证不会继续显示上一个画布的对话。
-- 画布 Agent：右侧 Agent 面板移除网站 / 本机模式切换，固定使用本机 Agent。
+- 画布 Agent：右侧 Agent 面板恢复网站 / 本机模式切换，默认使用网站模式并按 PeterAI 用户命名空间记住选择。
 - 配置与用户偏好：每个模型渠道新增 OpenAI / Gemini 调用格式选择，默认 OpenAI，切换默认格式时同步更新默认 Base URL；渠道 Tab 增加紧凑醒目的提醒，说明模型是否可选需要到“模型”Tab 选择。
 - Gemini 调用格式：支持拉取 Gemini 模型列表，并用于文本问答、在线 Agent 工具调用、基础生图和图生图请求。
 - Gemini 生图：生图工作台和画布生图会把尺寸配置转换为 Gemini `responseFormat.image.aspectRatio` 传入，需验证 1:1、9:16、16:9 及自定义像素尺寸的输出比例。

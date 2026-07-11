@@ -26,6 +26,7 @@
 - 所有业务存储使用后端用户 ID 命名空间 `peterai-canvas:<user-id>`。
 - PeterAI 渠道只调用当前域名的 `/peter-api`，不能绕过 Sub2API 直连真实上游。
 - Canvas 不提供独立注册或登录；所有业务用户必须先通过 PeterAI JWT 验证。用户主动配置的自有 URL/API Key 渠道继续保留，并明确标记为非 PeterAI 托管；第三方域名保持浏览器直连，手工填写 PeterAI 官方站点域名时必须归一化到同源 `/peter-api`，避免绕过站内计费或触发 CORS。
+- Agent 必须保留“网站 / 本机”两种模式：网站模式只读取渠道配置中的 URL、API Key 和文本模型，PeterAI 托管渠道经 `/peter-api/v1/responses` 计费；本机模式只使用 Local URL 和 Connect token。两类凭据不得互相代填、写入 URL 或记录到日志。
 - 图片模型和价格来自 `/user/image-generation/options`；价格缺失时显示“以实际扣费为准”。
 - 非图片模型必须同时出现在 Key 的 `/v1/models` 和 `/channels/available` 分组元数据中；无法可靠分类的模型不进入默认列表。
 - 生图每个请求固定 `n=1`，浏览器队列最多 4 并发；失败结果不允许发布 Gallery。
