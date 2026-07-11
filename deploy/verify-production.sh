@@ -27,6 +27,14 @@ if grep -qi '^X-Frame-Options:.*SAMEORIGIN' "$headers"; then
   exit 1
 fi
 
+echo "== query-string log redaction =="
+query_probe="peter-query-probe-$$"
+curl -fsS -o /dev/null "http://127.0.0.1:13000/canvas?token=$query_probe"
+if docker logs --since 10s peterai-canvas 2>&1 | grep -q "$query_probe"; then
+  echo "Canvas access log exposed a query string" >&2
+  exit 1
+fi
+
 echo "== proxy allowlist =="
 status="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:13000/peter-api/api/v1/auth/me)"
 [[ "$status" == "401" ]]
@@ -36,6 +44,14 @@ wrong_method="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1
 [[ "$wrong_method" == "405" ]]
 video_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:13000/peter-api/v1/videos)"
 [[ "$video_create" == "401" ]]
+responses_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:13000/peter-api/v1/responses)"
+[[ "$responses_create" == "401" ]]
+image_create="$(curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:13000/peter-api/v1/images/generations)"
+[[ "$image_create" == "401" ]]
+
+echo "== exact source commit =="
+EXPECTED_SOURCE_REF="${EXPECTED_SOURCE_REF:-$(git -C "$ROOT_DIR" rev-parse HEAD)}"
+docker exec peterai-canvas sh -lc "grep -R -q 'peterai-canvas/tree/$EXPECTED_SOURCE_REF' /usr/share/nginx/html"
 
 if [[ "${VERIFY_PUBLIC:-0}" == "1" ]]; then
   echo "== public canvas =="
@@ -45,7 +61,7 @@ fi
 if [[ "${VERIFY_MENU:-0}" == "1" ]]; then
   echo "== Sub2API custom menu =="
   curl -fsS --max-time 15 "$SUB2API_BASE_URL/api/v1/settings/public" \
-    | jq -e --arg id "$CANVAS_MENU_ID" '.data.custom_menu_items[] | select(.id == $id and .url == "https://canvas.peterai.cc.cd/canvas?mode=recent")' >/dev/null
+    | jq -e --arg id "$CANVAS_MENU_ID" '.data.available_channels_enabled == true and any(.data.custom_menu_items[]; .id == $id and .url == "https://canvas.peterai.cc.cd/canvas?mode=recent")' >/dev/null
   curl -fsS --max-time 15 "$SUB2API_BASE_URL/custom/$CANVAS_MENU_ID" \
     | grep -q 'canvas\.peterai\.cc\.cd/canvas'
 fi

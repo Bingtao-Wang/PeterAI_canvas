@@ -51,6 +51,36 @@ describe("PeterAI bootstrap", () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it("restores a valid session token after a same-tab refresh", async () => {
+        window.sessionStorage.setItem("peterai-canvas:peter-session:v1", JSON.stringify({ token: "stored-token", userId: 7, srcHost: "https://api.peterai.cc.cd" }));
+        window.history.replaceState(null, "", "/canvas?mode=recent");
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (input: RequestInfo | URL) => {
+                const url = String(input);
+                if (url.includes("/auth/me")) return json({ code: 0, data: { id: 7 } });
+                if (url.includes("/keys")) return json({ code: 0, data: { items: [] } });
+                if (url.includes("/image-generation/options")) return json({ code: 0, data: { keys: [] } });
+                if (url.includes("/channels/available")) return json({ code: 0, data: [] });
+                throw new Error(`unexpected request ${url}`);
+            }),
+        );
+
+        await expect(bootstrapPeterSession()).resolves.toMatchObject({ token: "stored-token", user: { id: 7 } });
+    });
+
+    it("rejects an expired recovered JWT before any API request", async () => {
+        const expired = `x.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 60 }))}.x`;
+        window.sessionStorage.setItem("peterai-canvas:peter-session:v1", JSON.stringify({ token: expired, userId: 7, srcHost: "https://api.peterai.cc.cd" }));
+        window.history.replaceState(null, "", "/canvas");
+        const fetchMock = vi.fn();
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(bootstrapPeterSession()).rejects.toThrow("请先登录 PeterAI");
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(window.sessionStorage.getItem("peterai-canvas:peter-session:v1")).toBeNull();
+    });
+
     it("intersects discovered models with authoritative PeterAI metadata", async () => {
         window.history.replaceState(null, "", "/canvas?token=user-jwt&src_host=https%3A%2F%2Fapi.peterai.cc.cd");
         vi.stubGlobal(
@@ -62,6 +92,7 @@ describe("PeterAI bootstrap", () => {
                     return json({ code: 0, data: { items: [
                         { id: 1, key: "image-key", name: "Image", status: "active", group_id: 7 },
                         { id: 2, key: "video-key", name: "Video", status: "active", group_id: 8 },
+                        { id: 3, key: "broken-key", name: "Broken", status: "active", group_id: 8 },
                     ] } });
                 if (url.includes("/image-generation/options")) return json({ code: 0, data: { keys: [{ id: 1, key: "image-key", name: "Image", group_id: 7, group_name: "OpenAI", models: ["gpt-image-2"], prices_by_model: { "gpt-image-2": { "1K": 0.1 } } }] } });
                 if (url.includes("/channels/available")) return json({ code: 0, data: [{ platforms: [
@@ -70,6 +101,7 @@ describe("PeterAI bootstrap", () => {
                 ] }] });
                 if (url.includes("/v1/models")) {
                     const authorization = (init?.headers as Record<string, string> | undefined)?.Authorization;
+                    if (authorization === "Bearer broken-key") return json({ error: { message: "invalid key" } }, 401);
                     return json({ data: authorization === "Bearer image-key"
                         ? [{ id: "gpt-image-2" }, { id: "gpt-5.5" }, { id: "mystery-model" }, { id: "gpt-4o-mini-tts" }]
                         : [{ id: "grok-imagine-video-1.5" }, { id: "grok-4" }] });
