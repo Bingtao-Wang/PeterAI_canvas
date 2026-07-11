@@ -293,9 +293,9 @@ export function createModelChannel(channel?: Partial<ModelChannel>): ModelChanne
     };
 }
 
-function mergeCapabilityModels(persisted: string[], channels: ModelChannel[], capability: ModelCapability) {
+export function mergeCapabilityModels(persisted: string[], channels: ModelChannel[], capability: ModelCapability) {
     const available = modelOptionsByCapability(channels, capability);
-    const allowed = new Set(available);
+    const allowed = new Set(modelOptionsFromChannels(channels));
     const kept = normalizeModelList(Array.isArray(persisted) ? persisted : [], channels).filter((model) => allowed.has(model));
     return uniqueModelOptions([...kept, ...available]);
 }

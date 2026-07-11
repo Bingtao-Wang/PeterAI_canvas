@@ -81,7 +81,7 @@ Sub2API 管理设置中的 `available_channels_enabled` 必须开启，否则 `/
 
 ### 当前 Sub2API 能力边界
 
-截至基线 `ebd8ae2` 接入时，本地 Sub2API 真实路由已验证支持 Models、Responses、Images 和 Grok 视频的 `POST /v1/videos/generations`、`GET /v1/videos/:id`。Canvas Nginx 将公开的 `POST /peter-api/v1/videos` 精确改写到该创建路由。
+截至基线 `ebd8ae2` 接入时，本地 Sub2API 真实路由已验证支持 Models、Responses、Images 和 Grok 视频的 `POST /v1/videos/generations`、`GET /v1/videos/:id`。Canvas Nginx 将公开的 `POST /peter-api/v1/videos` 精确改写到该创建路由；Peter managed adapter 必须发送 Sub2API/xAI JSON 字段 `model`、`prompt`、`duration`、`resolution` 和可选单张 `image.image_url`，并兼容创建响应的 `request_id` 与轮询响应的 `video.url`。
 
 当前 Sub2API 尚无 `/v1/audio/speech`、Seedance tasks 和视频 `/content` 路由，因此 PeterAI 托管渠道不默认暴露音频或 Seedance 模型；网页原有音频、Seedance 和其他完整能力仍可通过用户手工第三方渠道使用。只有 Sub2API 后端增加并验证对应路由后，才能放开托管模型分类，禁止仅靠前端或 Nginx 宣称支持。
 

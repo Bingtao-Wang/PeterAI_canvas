@@ -1,16 +1,38 @@
 import { expect, test } from "@playwright/test";
 
-const canvasPath = "/canvas?mode=recent&token=e2e-jwt&src_host=https%3A%2F%2Fapi.peterai.cc.cd&ui_mode=embedded&user_id=999";
+const canvasPathFor = (token: string) => `/canvas?mode=recent&token=${encodeURIComponent(token)}&src_host=https%3A%2F%2Fapi.peterai.cc.cd&ui_mode=embedded&user_id=999`;
+const canvasPath = canvasPathFor("e2e-jwt");
 
 test.beforeEach(async ({ page }) => {
     await page.route("**/peter-api/**", async (route) => {
         const path = new URL(route.request().url()).pathname;
-        if (path.endsWith("/auth/me")) return route.fulfill({ json: { code: 0, data: { id: 42, username: "e2e" } } });
+        if (path.endsWith("/auth/me")) {
+            const userId = route.request().headers().authorization === "Bearer e2e-jwt-b" ? 43 : 42;
+            return route.fulfill({ json: { code: 0, data: { id: userId, username: `e2e-${userId}` } } });
+        }
         if (path.endsWith("/keys")) return route.fulfill({ json: { code: 0, data: { items: [] } } });
         if (path.endsWith("/image-generation/options")) return route.fulfill({ json: { code: 0, data: { keys: [] } } });
         if (path.endsWith("/channels/available")) return route.fulfill({ json: { code: 0, data: [] } });
         return route.fulfill({ status: 404, json: { error: { message: "not found" } } });
     });
+});
+
+test("keeps canvas projects isolated when the verified PeterAI user changes", async ({ page }) => {
+    await page.goto(canvasPathFor("e2e-jwt-a"));
+    const initialTitle = page.getByTitle("双击修改画布名称");
+    await expect(initialTitle).toBeVisible();
+    await initialTitle.dblclick();
+    await page.locator('input[value="无限画布 1"]').fill("用户A私有画布");
+    await page.locator('input[value="用户A私有画布"]').press("Enter");
+    await expect(page.getByText("用户A私有画布", { exact: true })).toBeVisible();
+    await page.waitForTimeout(700);
+
+    await page.goto(canvasPathFor("e2e-jwt-b"));
+    await expect(page.getByText("用户A私有画布", { exact: true })).toHaveCount(0);
+    await expect(page.getByTitle("双击修改画布名称")).toHaveText("无限画布 1");
+
+    await page.goto(canvasPathFor("e2e-jwt-a"));
+    await expect(page.getByText("用户A私有画布", { exact: true })).toBeVisible();
 });
 
 test("cleans credentials, isolates storage, and only hides navigation inside an iframe", async ({ page }) => {

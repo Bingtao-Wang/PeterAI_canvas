@@ -8,7 +8,17 @@ import { buildApiUrl, modelOptionName, resolveModelRequestConfig, type AiConfig 
 import type { ReferenceImage } from "@/types/image";
 import type { ReferenceAudio, ReferenceVideo } from "@/types/media";
 
-type VideoResponse = { id: string; status?: string; error?: { message?: string }; url?: string; result_url?: string; video_url?: string; content?: { video_url?: string; url?: string } | null };
+type VideoResponse = {
+    id?: string;
+    request_id?: string;
+    status?: string;
+    error?: { message?: string };
+    url?: string;
+    result_url?: string;
+    video_url?: string;
+    video?: { url?: string; video_url?: string } | null;
+    content?: { video_url?: string; url?: string } | null;
+};
 type ApiVideoResponse = VideoResponse | { code?: number | string; data?: VideoResponse | null; msg?: string; message?: string; error?: { message?: string } };
 type SeedanceTask = {
     id: string;
@@ -83,6 +93,26 @@ export async function storeGeneratedVideo(result: VideoGenerationResult): Promis
 }
 
 async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options?: RequestOptions): Promise<VideoGenerationTask> {
+    if (isPeterGrokVideoConfig(config, model)) {
+        if (references.length > 1) throw new Error("PeterAI Grok 视频当前只支持 1 张参考图");
+        const referenceUrl = references[0] ? await imageToDataUrl(references[0]) : "";
+        try {
+            const created = unwrapVideoResponse(
+                (
+                    await axios.post<ApiVideoResponse>(aiApiUrl(config, "/videos"), buildPeterGrokVideoPayload(config, model, prompt, referenceUrl), {
+                        headers: aiHeaders(config, "application/json"),
+                        signal: options?.signal,
+                    })
+                ).data,
+            );
+            const taskId = videoTaskId(created);
+            if (!taskId) throw new Error("视频接口没有返回任务 ID");
+            return { id: taskId, provider: "openai", model };
+        } catch (error) {
+            throw new Error(readAxiosError(error, "视频任务创建失败"));
+        }
+    }
+
     const body = new FormData();
     body.append("model", modelOptionName(model));
     body.append("prompt", prompt);
@@ -94,8 +124,9 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
     files.forEach((file) => body.append("input_reference[]", file));
     try {
         const created = unwrapVideoResponse((await axios.post<ApiVideoResponse>(aiApiUrl(config, "/videos"), body, { headers: aiHeaders(config), signal: options?.signal })).data);
-        if (!created.id) throw new Error("视频接口没有返回任务 ID");
-        return { id: created.id, provider: "openai", model };
+        const taskId = videoTaskId(created);
+        if (!taskId) throw new Error("视频接口没有返回任务 ID");
+        return { id: taskId, provider: "openai", model };
     } catch (error) {
         throw new Error(readAxiosError(error, "视频任务创建失败"));
     }
@@ -106,7 +137,8 @@ async function pollOpenAIVideoTask(config: AiConfig, task: VideoGenerationTask, 
         const video = unwrapVideoResponse((await axios.get<ApiVideoResponse>(aiApiUrl(config, `/videos/${task.id}`), { headers: aiHeaders(config), signal: options?.signal })).data);
         const url = videoResultUrl(video);
         if (url) return { status: "completed", result: await videoResultFromUrl(url, options) };
-        if (video.status === "completed") {
+        if (video.status === "completed" || video.status === "done" || video.status === "succeeded") {
+            if (isPeterManagedBaseUrl(config.baseUrl)) return { status: "failed", error: "PeterAI 视频任务成功但没有返回视频 URL" };
             const content = await axios.get<Blob>(aiApiUrl(config, `/videos/${task.id}/content`), { headers: aiHeaders(config), responseType: "blob", signal: options?.signal });
             await assertVideoBlob(content.data);
             return { status: "completed", result: { blob: content.data } };
@@ -116,6 +148,25 @@ async function pollOpenAIVideoTask(config: AiConfig, task: VideoGenerationTask, 
     } catch (error) {
         throw new Error(readAxiosError(error, "视频任务查询失败"));
     }
+}
+
+export function buildPeterGrokVideoPayload(config: AiConfig, model: string, prompt: string, referenceUrl = "") {
+    return {
+        model: modelOptionName(model),
+        prompt,
+        duration: Number(normalizeVideoSeconds(config.videoSeconds)),
+        resolution: normalizeVideoResolution(config.vquality),
+        ...(referenceUrl ? { image: { image_url: referenceUrl } } : {}),
+    };
+}
+
+function isPeterGrokVideoConfig(config: AiConfig, model: string) {
+    const name = modelOptionName(model).toLowerCase();
+    return isPeterManagedBaseUrl(config.baseUrl) && name.includes("grok") && name.includes("video");
+}
+
+function isPeterManagedBaseUrl(baseUrl: string) {
+    return /(?:^|\/)peter-api\/?$/i.test(baseUrl.trim());
 }
 
 async function createSeedanceTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], videoReferences: ReferenceVideo[], audioReferences: ReferenceAudio[], options?: RequestOptions): Promise<VideoGenerationTask> {
@@ -281,8 +332,13 @@ function unwrapEnvelope<T>(payload: ApiEnvelope<T>, emptyMessage: string): T {
     return payload as T;
 }
 
-function videoResultUrl(payload: VideoResponse | SeedanceTask) {
-    return [payload.video_url, payload.result_url, payload.url, payload.content?.video_url, payload.content?.url].find((url) => typeof url === "string" && (isPublicMediaUrl(url) || /\.mp4(\?|#|$)/i.test(url)));
+export function videoTaskId(payload: VideoResponse) {
+    return String(payload.id || payload.request_id || "").trim();
+}
+
+export function videoResultUrl(payload: VideoResponse | SeedanceTask) {
+    const video = "video" in payload ? payload.video : undefined;
+    return [payload.video_url, payload.result_url, payload.url, payload.content?.video_url, payload.content?.url, video?.video_url, video?.url].find((url) => typeof url === "string" && (isPublicMediaUrl(url) || /\.mp4(\?|#|$)/i.test(url)));
 }
 
 function readApiErrorMessage(value: unknown): string {

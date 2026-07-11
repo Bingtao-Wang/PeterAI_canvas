@@ -81,10 +81,16 @@ describe("PeterAI bootstrap", () => {
         const session = await bootstrapPeterSession();
         expect(session.channels).toHaveLength(2);
         expect(session.channels[0].capabilities).toEqual({ image: ["gpt-image-2"], video: [], audio: [], text: ["gpt-5.5"] });
-        expect(session.channels[0].models).not.toContain("mystery-model");
+        expect(session.channels[0].models).toContain("mystery-model");
+        expect(session.channels[0].capabilities.text).not.toContain("mystery-model");
         expect(session.channels[0].models).not.toContain("gpt-4o-mini-tts");
         expect(session.channels[1].capabilities.video).toEqual(["grok-imagine-video-1.5"]);
         expect(session.channels[1].capabilities.text).toEqual(["grok-4"]);
+
+        const { defaultConfig } = await import("@/stores/use-config-store");
+        expect(defaultConfig.channels[0].apiKey).toBe("image-key");
+        clearPeterSession();
+        expect(defaultConfig.channels[0].apiKey).toBe("");
     });
 
     it("clears recovered credentials and storage scope after a 401", async () => {

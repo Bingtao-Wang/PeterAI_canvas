@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig, sanitizePersistedConfig } from "@/stores/use-config-store";
+import { defaultConfig, mergeCapabilityModels, sanitizePersistedConfig } from "@/stores/use-config-store";
 
 describe("PeterAI managed channel persistence", () => {
     it("removes managed API keys while retaining manual third-party keys", () => {
@@ -18,5 +18,21 @@ describe("PeterAI managed channel persistence", () => {
         expect(persisted.channels[1].apiKey).toBe("");
         expect(persisted.channels[1].pricesByModel).toBeUndefined();
         expect(JSON.stringify(persisted)).not.toContain("managed-secret");
+    });
+
+    it("retains a manually classified verified model without adding it to defaults", () => {
+        const channels = [{
+            id: "peter-1",
+            name: "Peter",
+            baseUrl: "/peter-api",
+            apiKey: "runtime-only",
+            apiFormat: "openai" as const,
+            models: ["gpt-5.5", "verified-unknown"],
+            source: "peterai" as const,
+            capabilities: { text: ["gpt-5.5"] },
+        }];
+
+        expect(mergeCapabilityModels([], channels, "text")).toEqual(["peter-1::gpt-5.5"]);
+        expect(mergeCapabilityModels(["peter-1::verified-unknown"], channels, "text")).toEqual(["peter-1::verified-unknown", "peter-1::gpt-5.5"]);
     });
 });

@@ -34,7 +34,9 @@ export async function publishCanvasImage(node: CanvasNodeData) {
     }
     const data = payload?.data;
     const item = Array.isArray(data) ? data[0] : data;
-    return Number(item?.id || 0);
+    const itemId = Number(item?.id || 0);
+    if (!Number.isInteger(itemId) || itemId <= 0) throw new Error("PeterAI 画廊未返回有效记录 ID");
+    return itemId;
 }
 
 function createThumbnail(dataUrl: string) {

@@ -139,19 +139,20 @@ async function loadManagedChannels(token: string): Promise<PeterManagedChannel[]
         const imageOption = imageByKey.get(Number(key.id));
         const imageModels = unique((imageOption?.models || []).filter((model) => fetchedModels.includes(model)));
         const groupMetadata = supportedByGroup.get(groupId);
-        const remaining = groupMetadata ? fetchedModels.filter((model) => groupMetadata.models.has(model) && !imageModels.includes(model)) : [];
+        const intersected = groupMetadata ? fetchedModels.filter((model) => groupMetadata.models.has(model) && !imageModels.includes(model)) : [];
+        const remaining = intersected.filter((model) => !isAudioModel(model) && (!isVideoModel(model) || groupMetadata?.platform === "grok"));
         const videoModels = groupMetadata?.platform === "grok" ? remaining.filter(isVideoModel) : [];
         const audioModels: string[] = [];
         const textModels = remaining.filter((model) => !videoModels.includes(model) && !audioModels.includes(model) && isTextModel(model));
-        const classified = unique([...imageModels, ...videoModels, ...audioModels, ...textModels]);
-        if (!classified.length) return null;
+        const visibleModels = unique([...imageModels, ...remaining]);
+        if (!visibleModels.length) return null;
         return {
             id: `peter-${key.id}`,
             name: `${key.name || `Key ${key.id}`} · ${key.group?.name || imageOption?.group_name || `分组 ${groupId}`}`,
             baseUrl: `${window.location.origin}/peter-api`,
             apiKey: key.key,
             apiFormat: "openai" as const,
-            models: classified,
+            models: visibleModels,
             source: "peterai" as const,
             keyId: Number(key.id),
             groupId,
