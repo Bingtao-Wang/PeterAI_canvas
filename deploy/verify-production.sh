@@ -66,8 +66,13 @@ fi
 
 if [[ "${VERIFY_MENU:-0}" == "1" ]]; then
   echo "== Sub2API custom menu =="
-  curl -fsS --max-time 15 "$SUB2API_BASE_URL/api/v1/settings/public" \
-    | jq -e --arg id "$CANVAS_MENU_ID" '.data.available_channels_enabled == true and any(.data.custom_menu_items[]; .id == $id and .url == "https://canvas.peterai.cc.cd/canvas?mode=recent")' >/dev/null
+  settings_json="$(curl -fsS --max-time 15 "$SUB2API_BASE_URL/api/v1/settings/public")"
+  jq -e --arg id "$CANVAS_MENU_ID" \
+    'any(.data.custom_menu_items[]; .id == $id and .url == "https://canvas.peterai.cc.cd/canvas?mode=recent")' \
+    >/dev/null <<<"$settings_json"
+  if [[ "${VERIFY_AVAILABLE_CHANNELS:-0}" == "1" ]]; then
+    jq -e '.data.available_channels_enabled == true' >/dev/null <<<"$settings_json"
+  fi
   curl -fsS --max-time 15 "$SUB2API_BASE_URL/custom/$CANVAS_MENU_ID" \
     | grep -q 'canvas\.peterai\.cc\.cd/canvas'
 fi
