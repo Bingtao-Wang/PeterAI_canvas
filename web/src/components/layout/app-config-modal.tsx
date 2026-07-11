@@ -9,7 +9,7 @@ import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webd
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
 import { useAgentStore } from "@/stores/use-agent-store";
 import { scopedStorageKey } from "@/peter/storage-scope";
-import { createModelChannel, defaultBaseUrlForApiFormat, modelOptionLabel, modelOptionsByCapability, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
+import { createModelChannel, defaultBaseUrlForApiFormat, modelCanBeAssignedToCapability, modelOptionLabel, modelOptionsByCapability, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -539,10 +539,10 @@ export function AppConfigModal() {
 
 function withChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
     const models = modelOptionsFromChannels(channels);
-    const imageModels = keepOrSuggest(config.imageModels, modelOptionsByCapability(channels, "image"), models);
-    const videoModels = keepOrSuggest(config.videoModels, modelOptionsByCapability(channels, "video"), models);
-    const textModels = keepOrSuggest(config.textModels, modelOptionsByCapability(channels, "text"), models);
-    const audioModels = keepOrSuggest(config.audioModels, modelOptionsByCapability(channels, "audio"), models);
+    const imageModels = keepOrSuggest(config.imageModels, modelOptionsByCapability(channels, "image"), models, channels, "image");
+    const videoModels = keepOrSuggest(config.videoModels, modelOptionsByCapability(channels, "video"), models, channels, "video");
+    const textModels = keepOrSuggest(config.textModels, modelOptionsByCapability(channels, "text"), models, channels, "text");
+    const audioModels = keepOrSuggest(config.audioModels, modelOptionsByCapability(channels, "audio"), models, channels, "audio");
     return {
         ...config,
         channels,
@@ -561,15 +561,15 @@ function withChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
     };
 }
 
-function keepOrSuggest(current: string[], suggested: string[], allModels: string[]) {
+function keepOrSuggest(current: string[], suggested: string[], allModels: string[], channels: ModelChannel[], capability: ModelCapability) {
     const available = new Set(allModels);
-    const kept = uniqueModels(current).filter((model) => available.has(model));
+    const kept = uniqueModels(current).filter((model) => available.has(model) && modelCanBeAssignedToCapability(model, channels, capability));
     return kept.length ? kept : suggested;
 }
 
 function normalizeDefaultModel(value: string, options: string[]) {
     if (options.includes(value)) return value;
-    return options[0] || value;
+    return options[0] || "";
 }
 
 function normalizeImageCount(value: string) {

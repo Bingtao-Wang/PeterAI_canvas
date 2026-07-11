@@ -231,6 +231,10 @@ export const useConfigStore = create<ConfigStore>()(
                 const manualChannels = normalizeChannels(config).filter((channel) => channel.source !== "peterai");
                 const channels = managedChannels.length ? [...managedChannels, ...manualChannels.filter((channel) => channel.id !== "default" || channel.apiKey.trim())] : manualChannels;
                 const models = modelOptionsFromChannels(channels);
+                const imageModels = mergeCapabilityModels(config.imageModels, channels, "image");
+                const videoModels = mergeCapabilityModels(config.videoModels, channels, "video");
+                const textModels = mergeCapabilityModels(config.textModels, channels, "text");
+                const audioModels = mergeCapabilityModels(config.audioModels, channels, "audio");
                 return {
                     ...current,
                     webdav: { ...defaultWebdavSyncConfig, ...persistedWebdav },
@@ -240,10 +244,10 @@ export const useConfigStore = create<ConfigStore>()(
                         apiFormat: normalizeApiFormat(config.apiFormat),
                         channels,
                         models,
-                        imageModel: normalizeModelOptionValue(config.imageModel || config.model, channels),
-                        videoModel: normalizeModelOptionValue(config.videoModel || "grok-imagine-video", channels),
-                        textModel: normalizeModelOptionValue(config.textModel || config.model, channels),
-                        audioModel: normalizeModelOptionValue(config.audioModel || defaultConfig.audioModel, channels),
+                        imageModel: modelDefaultByCapability(config.imageModel || config.model, imageModels, channels),
+                        videoModel: modelDefaultByCapability(config.videoModel, videoModels, channels),
+                        textModel: modelDefaultByCapability(config.textModel, textModels, channels),
+                        audioModel: modelDefaultByCapability(config.audioModel, audioModels, channels),
                         audioVoice: config.audioVoice || defaultConfig.audioVoice,
                         audioFormat: config.audioFormat || defaultConfig.audioFormat,
                         audioSpeed: config.audioSpeed || defaultConfig.audioSpeed,
@@ -253,10 +257,10 @@ export const useConfigStore = create<ConfigStore>()(
                         videoGenerateAudio: config.videoGenerateAudio || "true",
                         videoWatermark: config.videoWatermark || "false",
                         canvasImageCount: config.canvasImageCount || "3",
-                        imageModels: mergeCapabilityModels(config.imageModels, channels, "image"),
-                        videoModels: mergeCapabilityModels(config.videoModels, channels, "video"),
-                        textModels: mergeCapabilityModels(config.textModels, channels, "text"),
-                        audioModels: mergeCapabilityModels(config.audioModels, channels, "audio"),
+                        imageModels,
+                        videoModels,
+                        textModels,
+                        audioModels,
                     },
                 };
             },
@@ -296,8 +300,22 @@ export function createModelChannel(channel?: Partial<ModelChannel>): ModelChanne
 export function mergeCapabilityModels(persisted: string[], channels: ModelChannel[], capability: ModelCapability) {
     const available = modelOptionsByCapability(channels, capability);
     const allowed = new Set(modelOptionsFromChannels(channels));
-    const kept = normalizeModelList(Array.isArray(persisted) ? persisted : [], channels).filter((model) => allowed.has(model));
+    const kept = normalizeModelList(Array.isArray(persisted) ? persisted : [], channels).filter((model) => allowed.has(model) && modelCanBeAssignedToCapability(model, channels, capability));
     return uniqueModelOptions([...kept, ...available]);
+}
+
+export function modelDefaultByCapability(value: string | undefined, options: string[], channels: ModelChannel[]) {
+    const normalized = normalizeModelOptionValue(value, channels);
+    return normalized && options.includes(normalized) ? normalized : options[0] || "";
+}
+
+export function modelCanBeAssignedToCapability(value: string, channels: ModelChannel[], capability: ModelCapability) {
+    const decoded = decodeChannelModel(normalizeModelOptionValue(value, channels));
+    if (!decoded) return true;
+    const channel = channels.find((item) => item.id === decoded.channelId);
+    if (!channel?.capabilities) return true;
+    const assigned = (Object.entries(channel.capabilities) as Array<[ModelCapability, string[] | undefined]>).filter(([, models]) => models?.includes(decoded.model)).map(([name]) => name);
+    return !assigned.length || assigned.includes(capability);
 }
 
 export function sanitizePersistedConfig(config: AiConfig): AiConfig {

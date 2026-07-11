@@ -11,7 +11,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 - PeterAI 生图：验证动态 1K/2K/4K 预计价格、未知价格提示、每请求 `n=1`、最多四并发、部分失败和 Gallery 发布。
 - PeterAI Grok 视频：验证 JSON 创建请求的时长、分辨率、单张参考图、`request_id` 轮询以及 `video.url` 下载/播放；多参考图应在请求前给出明确提示。
 - PeterAI 部署：验证 `canvas.peterai.cc.cd` iframe、安全响应头、100MB 参考图、120 秒代理超时、代理白名单、Cloudflare Tunnel 和回滚。
-- PeterAI 网站 Agent：右侧面板恢复“网站 / 本机”切换；网站模式应显示渠道 Base URL、默认文本模型和“配置 URL / API Key”入口，PeterAI 域名请求必须走同源 `/peter-api/v1/responses` 并计入站内 usage，手工第三方渠道保持浏览器直连；验证工具确认/拒绝、画布操作、站点工具、停止请求和用户隔离的模式偏好。
+- PeterAI 网站 Agent：右侧面板恢复“网站 / 本机”切换；网站模式应显示文本模型实际所属渠道、默认文本模型和“配置 URL / API Key”入口，嵌入页与新窗口都必须能打开配置弹窗；仅包含生图模型的托管渠道不得被选成文本渠道。PeterAI 域名请求必须走同源 `/peter-api/v1/responses` 并计入站内 usage，手工第三方渠道保持浏览器直连；验证工具确认/拒绝、画布操作、站点工具、停止请求和用户隔离的模式偏好。
 
 - 本地 Agent 连接说明：新增提醒说明只有安装 Codex 插件或手动添加 MCP 后才会增加 Codex token 消耗，直接运行 `npx -y @basketikun/canvas-agent` 不会安装 MCP；需验证文案位置清晰。
 - 本地 Agent 连接说明：画布面板和配置页 Codex Tab 改为区分“Codex 插件启动画布”和“直接运行 Agent 后网页连接”两种方式，需验证文案和布局清晰。

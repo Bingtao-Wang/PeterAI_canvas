@@ -53,7 +53,7 @@ export function WebAgentPanel() {
     const resolvedSessionId = activeSessionId || initialSessionId;
     const activeSession = sessions.find((item) => item.id === resolvedSessionId) || sessions[0];
     const activeModel = effectiveConfig.textModel || "";
-    const activeChannel = resolveModelChannel(effectiveConfig, activeModel);
+    const activeChannel = activeModel ? resolveModelChannel(effectiveConfig, activeModel) : null;
     const ready = isAiConfigReady({ ...effectiveConfig, model: activeModel }, activeModel);
 
     useEffect(() => {
@@ -125,7 +125,7 @@ export function WebAgentPanel() {
         appendMessage(sessionId, { id: nanoid(), role: "user", text });
         setPrompt("");
         setActiveTab("chat");
-        addLog("发送请求", { model: modelOptionLabel(effectiveConfig, activeModel), channel: activeChannel.name });
+        addLog("发送请求", { model: modelOptionLabel(effectiveConfig, activeModel), channel: activeChannel?.name || "未选择" });
         await runStep(sessionId, assistantId, messages, 1);
     };
 
@@ -262,9 +262,9 @@ export function WebAgentPanel() {
                             <div className="text-xs" style={{ color: theme.node.muted }}>
                                 当前渠道
                             </div>
-                            <div className="mt-1 text-sm font-medium">{activeChannel.name}</div>
+                            <div className="mt-1 text-sm font-medium">{activeChannel?.name || "尚未选择文本渠道"}</div>
                             <div className="mt-1 break-all text-xs" style={{ color: theme.node.muted }}>
-                                {activeChannel.baseUrl || "尚未填写 Base URL"}
+                                {activeChannel?.baseUrl || "请配置包含文本模型的渠道"}
                             </div>
                             <div className="mt-2 text-xs" style={{ color: ready ? "#16a34a" : "#d97706" }}>
                                 {ready ? "URL、API Key 与文本模型已就绪" : "尚未配置可用的文本模型或 API Key"}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildApiUrl, defaultConfig, mergeCapabilityModels, sanitizePersistedConfig } from "@/stores/use-config-store";
+import { buildApiUrl, defaultConfig, mergeCapabilityModels, modelDefaultByCapability, sanitizePersistedConfig } from "@/stores/use-config-store";
 
 describe("PeterAI managed channel persistence", () => {
     it("removes managed API keys while retaining manual third-party keys", () => {
@@ -34,6 +34,23 @@ describe("PeterAI managed channel persistence", () => {
 
         expect(mergeCapabilityModels([], channels, "text")).toEqual(["peter-1::gpt-5.5"]);
         expect(mergeCapabilityModels(["peter-1::verified-unknown"], channels, "text")).toEqual(["peter-1::verified-unknown", "peter-1::gpt-5.5"]);
+    });
+
+    it("never reuses a PeterAI image-only model as the default text model", () => {
+        const channels = [{
+            id: "peter-image",
+            name: "Peter image",
+            baseUrl: "/peter-api",
+            apiKey: "runtime-only",
+            apiFormat: "openai" as const,
+            models: ["gpt-image-2"],
+            source: "peterai" as const,
+            capabilities: { image: ["gpt-image-2"], text: [] },
+        }];
+        const textModels = mergeCapabilityModels(["peter-image::gpt-image-2"], channels, "text");
+
+        expect(textModels).toEqual([]);
+        expect(modelDefaultByCapability("peter-image::gpt-image-2", textModels, channels)).toBe("");
     });
 
     it("routes manually entered PeterAI URLs through the same-origin allowlisted proxy", () => {

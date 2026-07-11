@@ -9,6 +9,7 @@
 + [新增] PeterAI 托管渠道新增 Audio Speech 与 Seedance 模型分类，统一经 Sub2API 路由和站内计费；用户手工 URL/API Key 渠道继续保留。
 + [修复] 手工填写 PeterAI API 域名时自动使用同源 `/peter-api`，避免浏览器 CORS 失败；PeterAI 嵌入页不再默认弹出可选本地 Agent，并明确区分 Agent token 与 API Key。
 + [新增] Agent 恢复“网站 / 本机”模式：网站模式直接使用渠道 URL、API Key 和文本模型调用 Responses 并执行画布/站点工具，本机模式继续连接 Canvas Agent。
++ [修复] 修复 PeterAI 嵌入模式未挂载配置弹窗，以及仅生图模型被错误回退为网站 Agent 默认文本模型的问题。
 
 + [优化] 本地 Agent 连接说明明确区分插件 / 手动 MCP 才会增加 Codex token 消耗，直接运行 Agent 不受影响。
 + [优化] 优化本地 Agent 连接说明，区分 Codex 插件启动和直接运行 Agent 两种方式。
