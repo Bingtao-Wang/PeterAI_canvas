@@ -91,7 +91,7 @@ Sub2API 管理设置中的 `available_channels_enabled` 必须开启，否则 `/
 canvas.peterai.cc.cd -> http://localhost:13000
 ```
 
-Git tag 使用 `peter-vX.Y.Z-upstream-<upstream-version>`，公开源码 commit 必须和生产镜像一致。
+Git tag 使用 `peter-vX.Y.Z-upstream-<upstream-version>`，公开源码 commit 必须和生产镜像一致。推送 `peter-v*` tag 后，release workflow 必须先通过 Web 单测、typecheck、build、关键 E2E 和 Canvas Agent build，随后才推送多架构 GHCR 镜像并创建 GitHub Release；失败时不得手工补发未经同等验证的镜像。
 
 ## 验证与回滚
 
