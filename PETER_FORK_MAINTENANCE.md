@@ -16,6 +16,8 @@
 
 生产源码 commit 由发布脚本读取 `git rev-parse HEAD`，写入镜像内源码链接；每次发布记录实际镜像 tag、Git tag 和 commit，三者必须一致，不能用工作区构建替代正式发布。
 
+当前候选构建为源码 `122006187afc`、镜像 `peterai-canvas:20260712-upstream-ebd8ae2-12200618`。该提交尚未推送到公共仓库，因此候选镜像不得替换当前生产镜像 `peterai-canvas:20260712-upstream-ebd8ae2-d57d7276`；先为仓库配置可写 deploy key、推送 `custom/peterai` 并确认精确 commit URL 可公开访问，再发布候选镜像。
+
 ## 定制不变量
 
 - 应用必须先通过 `/api/v1/auth/me` 验证用户，再加载 Zustand 和 IndexedDB。
