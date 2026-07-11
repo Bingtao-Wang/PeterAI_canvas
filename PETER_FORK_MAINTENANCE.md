@@ -16,7 +16,7 @@
 
 生产源码 commit 由发布脚本读取 `git rev-parse HEAD`，写入镜像内源码链接；每次发布记录实际镜像 tag、Git tag 和 commit，三者必须一致，不能用工作区构建替代正式发布。
 
-当前生产构建为源码 `8df0d1dfe3ce`、镜像 `peterai-canvas:20260712-upstream-ebd8ae2-8df0d1df`。`custom/peterai` 已推送到公共仓库，精确 commit URL 已验证可公开访问；本机与公网健康、安全头、查询字符串脱敏、代理白名单、源码链接、DNS/Tunnel、正式菜单、iframe URL 和 CSP 均已验收。手工填写 PeterAI API 域名会使用同源 `/peter-api`，嵌入页不再默认打开可选本地 Agent。`available_channels_enabled` 当前仍关闭：图片模型可从生图选项安全导入，非图片托管模型要等真实账号、显式能力和价格验收后再开放。
+当前生产构建为源码 `48f086172e5f`、镜像 `peterai-canvas:20260712-upstream-ebd8ae2-48f08617`。`custom/peterai` 已推送到公共仓库，精确 commit URL 已验证可公开访问；本机与公网健康、安全头、查询字符串脱敏、代理白名单、源码链接、DNS/Tunnel、正式菜单、iframe URL 和 CSP 均已验收。Agent 已恢复“网站 / 本机”切换，网站模式可直接打开渠道 URL/API Key 配置并使用文本模型；手工填写 PeterAI API 域名会使用同源 `/peter-api`，嵌入页不再默认连接可选本地 Agent。`available_channels_enabled` 当前仍关闭：图片模型可从生图选项安全导入，非图片托管模型要等真实账号、显式能力和价格验收后再开放。
 
 ## 定制不变量
 
