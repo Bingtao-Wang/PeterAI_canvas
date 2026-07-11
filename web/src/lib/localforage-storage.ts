@@ -1,8 +1,9 @@
 import localforage from "localforage";
 import type { StateStorage } from "zustand/middleware";
+import { getStorageDatabaseName, scopedStorageKey } from "@/peter/storage-scope";
 
 localforage.config({
-    name: "infinite-canvas",
+    name: getStorageDatabaseName(),
     storeName: "app_state",
 });
 
@@ -12,7 +13,7 @@ export const localForageStorage: StateStorage = {
         try {
             return (await localforage.getItem<string>(name)) || null;
         } catch {
-            return window.localStorage.getItem(name);
+            return window.localStorage.getItem(scopedStorageKey(name));
         }
     },
     setItem: async (name, value) => {
@@ -20,7 +21,7 @@ export const localForageStorage: StateStorage = {
         try {
             await localforage.setItem(name, value);
         } catch {
-            window.localStorage.setItem(name, value);
+            window.localStorage.setItem(scopedStorageKey(name), value);
         }
     },
     removeItem: async (name) => {
@@ -28,7 +29,7 @@ export const localForageStorage: StateStorage = {
         try {
             await localforage.removeItem(name);
         } catch {
-            window.localStorage.removeItem(name);
+            window.localStorage.removeItem(scopedStorageKey(name));
         }
     },
 };

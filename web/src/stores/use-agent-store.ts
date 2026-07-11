@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type { CanvasAgentOp, CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
+import { scopedStorageKey } from "@/peter/storage-scope";
 
 export type AgentChatRole = "user" | "assistant" | "system" | "tool" | "error";
 export type AgentAttachment = { id: string; name: string; type: string; size: number; url: string; dataUrl: string };
@@ -55,13 +56,13 @@ type AgentStore = {
 export const CANVAS_AGENT_PANEL_MOTION_MS = 500;
 
 export const useAgentStore = create<AgentStore>((set, get) => ({
-    width: typeof window === "undefined" ? 440 : Number(localStorage.getItem("canvas-agent-panel-width")) || 440,
+    width: typeof window === "undefined" ? 440 : Number(localStorage.getItem(scopedStorageKey("canvas-agent-panel-width"))) || 440,
     panelOpen: false,
     panelMounted: true,
     panelClosing: false,
     canvasContext: null,
-    url: typeof window === "undefined" ? "http://127.0.0.1:17371" : localStorage.getItem("canvas-agent-url") || "http://127.0.0.1:17371",
-    token: typeof window === "undefined" ? "" : localStorage.getItem("canvas-agent-token") || "",
+    url: typeof window === "undefined" ? "http://127.0.0.1:17371" : localStorage.getItem(scopedStorageKey("canvas-agent-url")) || "http://127.0.0.1:17371",
+    token: typeof window === "undefined" ? "" : localStorage.getItem(scopedStorageKey("canvas-agent-token")) || "",
     connected: false,
     enabled: false,
     prompt: "",
@@ -100,8 +101,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         } catch {
             return set({ connectError: "Local URL 格式不正确" });
         }
-        localStorage.setItem("canvas-agent-url", endpoint);
-        localStorage.setItem("canvas-agent-token", token);
+        localStorage.setItem(scopedStorageKey("canvas-agent-url"), endpoint);
+        localStorage.setItem(scopedStorageKey("canvas-agent-token"), token);
         // 只设 enabled=true，由 CanvasLocalAgentPanel 的 useEffect 统一负责开 SSE
         set({ url: endpoint, token, enabled: true, activity: "连接中", connectError: "" });
     },

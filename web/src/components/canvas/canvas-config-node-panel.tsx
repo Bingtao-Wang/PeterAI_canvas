@@ -10,6 +10,7 @@ import { CanvasImageSettingsPopover } from "./canvas-image-settings-popover";
 import { CanvasAudioSettingsPopover, type CanvasAudioSettingKey } from "./canvas-audio-settings-popover";
 import { CanvasVideoSettingsPopover } from "./canvas-video-settings-popover";
 import type { CanvasGenerationMode, CanvasNodeData, CanvasNodeMetadata } from "@/types/canvas";
+import { estimatePeterImageCost, formatPeterImageEstimate } from "@/peter/pricing";
 
 type CanvasConfigNodePanelProps = {
     node: CanvasNodeData;
@@ -31,6 +32,7 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
     const hasAnyInput = Boolean(inputSummary.textCount || inputSummary.imageCount || inputSummary.videoCount || inputSummary.audioCount);
     const hasComposerContent = Boolean((node.metadata?.composerContent ?? node.metadata?.prompt ?? "").trim());
     const canGenerate = hasComposerContent || (mode === "audio" ? inputSummary.textCount > 0 : hasAnyInput);
+    const priceText = mode === "image" ? formatPeterImageEstimate(estimatePeterImageCost(config)) : "";
 
     return (
         <div className="flex h-full w-full cursor-move flex-col px-3 pb-3 pt-7 text-sm" style={{ color: theme.node.text }} onWheel={(event) => event.stopPropagation()}>
@@ -106,6 +108,7 @@ export function CanvasConfigNodePanel({ node, isRunning, inputSummary, onConfigC
                 ) : null}
             </div>
 
+            {priceText ? <div className="mb-1 text-center text-[11px] opacity-60">{priceText}</div> : null}
             <Button
                 type="primary"
                 className="mt-auto !h-9 !w-full !cursor-pointer !rounded-lg"

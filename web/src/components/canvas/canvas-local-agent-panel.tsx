@@ -11,6 +11,7 @@ import { useAgentStore, type AgentAttachment, type AgentChatItem, type AgentEven
 import { summarizeCanvasAgentOps, type CanvasAgentOp, type CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
 import { isSiteTool, runSiteTool, SITE_TOOL_LABELS } from "@/lib/agent/agent-site-tools";
 import { AgentChatComposer, AgentChatMessage, AgentPanelTabs, AgentPendingToolCard, AgentWorkingMessage, type CanvasAgentChatAttachment } from "./canvas-agent-chat-ui";
+import { scopedStorageKey } from "@/peter/storage-scope";
 
 const MAX_ATTACHMENTS = 6;
 const MAX_ATTACHMENT_PAYLOAD_BYTES = 28 * 1024 * 1024;
@@ -96,8 +97,8 @@ export function CanvasLocalAgentPanel({ embedded, headless, autoConnect }: { emb
 
     useEffect(() => {
         if (!enabled || !token.trim()) return;
-        localStorage.setItem("canvas-agent-url", endpoint);
-        localStorage.setItem("canvas-agent-token", token);
+        localStorage.setItem(scopedStorageKey("canvas-agent-url"), endpoint);
+        localStorage.setItem(scopedStorageKey("canvas-agent-token"), token);
         const clientId = clientIdRef.current;
         const source = new EventSource(`${endpoint}/events?token=${encodeURIComponent(token)}&clientId=${encodeURIComponent(clientId)}`);
         source.addEventListener("hello", () => {

@@ -5,6 +5,12 @@ description: 当前版本已实现但仍需人工验证的变更项
 
 # 待测试
 
+- PeterAI 接入：验证 iframe JWT 初始化后地址清理、刷新 session 恢复、恶意 `src_host` 拒绝和 401 会话清理。
+- PeterAI 数据隔离：使用同一浏览器依次登录两个用户，确认画布、素材、媒体、生成记录、WebDAV 和 Agent 配置互不串读，持久化数据中不存在 PeterAI Key/JWT。
+- PeterAI 多能力渠道：开启 Sub2API `available_channels_enabled` 后验证全部有效 Key 的模型交集导入、图片/文本/Grok 视频分类，以及单 Key 模型加载失败不阻塞其他 Key；音频和 Seedance 在 Sub2API 增加真实路由前仅验证手工第三方渠道。
+- PeterAI 生图：验证动态 1K/2K/4K 预计价格、未知价格提示、每请求 `n=1`、最多四并发、部分失败和 Gallery 发布。
+- PeterAI 部署：验证 `canvas.peterai.cc.cd` iframe、安全响应头、100MB 参考图、120 秒代理超时、代理白名单、Cloudflare Tunnel 和回滚。
+
 - 本地 Agent 连接说明：新增提醒说明只有安装 Codex 插件或手动添加 MCP 后才会增加 Codex token 消耗，直接运行 `npx -y @basketikun/canvas-agent` 不会安装 MCP；需验证文案位置清晰。
 - 本地 Agent 连接说明：画布面板和配置页 Codex Tab 改为区分“Codex 插件启动画布”和“直接运行 Agent 后网页连接”两种方式，需验证文案和布局清晰。
 - 全站 Agent：Agent 面板从画布页抽离为全站常驻面板，挂在全局布局右侧，开/关只挤压左侧内容不遮挡；顶栏和画布工具条各有一个开关按钮，需验证在首页、生图、视频、素材、提示词库、画布等页面都能打开面板并保持 SSE 连接不断开。

@@ -2,7 +2,7 @@ name: Docker image
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["peter-v*"]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/basketikun/infinite-canvas
+  IMAGE_NAME: ghcr.io/bingtao-wang/peterai-canvas
 
 jobs:
   meta:
@@ -56,6 +56,8 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: |
+            PETER_SOURCE_REF=${{ github.sha }}
           labels: ${{ needs.meta.outputs.labels }}
           outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=app-${{ matrix.arch }}

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent as ReactChangeEvent, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, Bot, Home, ImageIcon, Images, List, Menu, Music2, Plus, Redo2, Settings2, Trash2, Undo2, Upload, Video } from "lucide-react";
+import { BookOpen, Bot, Code2, Home, ImageIcon, Images, List, Menu, Music2, Plus, Redo2, Settings2, Trash2, Undo2, Upload, Video } from "lucide-react";
 import { saveAs } from "file-saver";
 
 import { requestEdit, requestGeneration, requestImageQuestion } from "@/services/api/image";
 import { requestAudioGeneration, storeGeneratedAudio } from "@/services/api/audio";
 import { requestVideoGeneration, storeGeneratedVideo } from "@/services/api/video";
-import { DOCS_URL } from "@/constant/env";
+import { DOCS_URL, SOURCE_URL, UPSTREAM_SOURCE_URL } from "@/constant/env";
 import { defaultConfig, type AiConfig, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
+import { PETER_IMAGE_MAX_CONCURRENCY, runWithConcurrency } from "@/peter/concurrency";
 import { resolveImageUrl, uploadImage, type UploadedImage } from "@/services/image-storage";
 import { resolveMediaUrl, uploadMediaFile, type UploadedFile } from "@/services/file-storage";
 import { nanoid } from "nanoid";
@@ -59,6 +60,7 @@ import {
 } from "@/types/canvas";
 import type { ReferenceImage } from "@/types/image";
 import type { ReferenceAudio } from "@/types/media";
+import { publishCanvasImage } from "@/peter/gallery";
 
 type CanvasClipboard = {
     nodes: CanvasNodeData[];
@@ -574,7 +576,7 @@ function InfiniteCanvasPage() {
             setConnections((prev) => [...prev, { id: nanoid(), ...connection }]);
             setSelectedNodeIds(new Set([newNode.id]));
             setSelectedConnectionId(null);
-            if (type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio && type !== CanvasNodeType.Group) setDialogNodeId(newNode.id);
+            if (type !== CanvasNodeType.Text && type !== CanvasNodeType.Audio) setDialogNodeId(newNode.id);
             setPendingConnectionCreate(null);
             setConnecting(null);
         },
@@ -1600,6 +1602,20 @@ function InfiniteCanvasPage() {
         [addAsset, message],
     );
 
+    const publishNodeToGallery = useCallback(
+        async (node: CanvasNodeData) => {
+            if (node.metadata?.galleryItemId) return message.info("这张图片已经发布到 PeterAI 画廊");
+            try {
+                const galleryItemId = await publishCanvasImage(node);
+                setNodes((current) => current.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, galleryItemId } } : item)));
+                message.success("已发布到 PeterAI 画廊");
+            } catch (error) {
+                message.error(error instanceof Error ? error.message : "发布失败");
+            }
+        },
+        [message],
+    );
+
     const createImageReversePromptNodes = useCallback(
         (node: CanvasNodeData) => {
             if (node.type !== CanvasNodeType.Image || !node.metadata?.content) {
@@ -1743,7 +1759,7 @@ function InfiniteCanvasPage() {
             setDialogNodeId(childId);
             const controller = startGenerationRequest(childId, node.id, childId);
             try {
-                const image = await requestEdit(generationConfig, prompt, [source], { id: `${node.id}-mask`, name: "mask.png", type: "image/png", dataUrl: payload.maskDataUrl }, { signal: controller.signal }).then((items) => items[0]);
+                const image = await requestEdit({ ...generationConfig, count: "1" }, prompt, [source], { id: `${node.id}-mask`, name: "mask.png", type: "image/png", dataUrl: payload.maskDataUrl }, { signal: controller.signal }).then((items) => items[0]);
                 const uploaded = await uploadImage(image.dataUrl);
                 const size = fitNodeSize(uploaded.width, uploaded.height, node.width, node.height);
                 setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, width: size.width, height: size.height, metadata: { ...item.metadata, ...imageMetadata(uploaded), prompt, ...generationMetadata } } : item)));
@@ -1819,7 +1835,7 @@ function InfiniteCanvasPage() {
             setDialogNodeId(childId);
             const controller = startGenerationRequest(childId, node.id, childId);
             try {
-                const image = await requestEdit(generationConfig, prompt, [{ id: node.id, name: `${node.title || node.id}.png`, type: node.metadata.mimeType || "image/png", dataUrl: node.metadata.content, storageKey: node.metadata.storageKey }], undefined, { signal: controller.signal }).then(
+                const image = await requestEdit({ ...generationConfig, count: "1" }, prompt, [{ id: node.id, name: `${node.title || node.id}.png`, type: node.metadata.mimeType || "image/png", dataUrl: node.metadata.content, storageKey: node.metadata.storageKey }], undefined, { signal: controller.signal }).then(
                     (items) => items[0],
                 );
                 const uploaded = await uploadImage(image.dataUrl);
@@ -2083,8 +2099,10 @@ function InfiniteCanvasPage() {
                     if (count > 1) startGenerationRequest(rootId, nodeId, nodeId, controller);
                     let hasSuccess = false;
                     let hasFailure = false;
-                    await Promise.all(
-                        targetIds.map(async (targetId) => {
+                    await runWithConcurrency(
+                        targetIds,
+                        PETER_IMAGE_MAX_CONCURRENCY,
+                        async (targetId) => {
                             try {
                                 const image = referenceImages.length
                                     ? await requestEdit({ ...generationConfig, count: "1" }, effectivePrompt, referenceImages, undefined, { signal: controller.signal }).then((items) => items[0])
@@ -2127,7 +2145,7 @@ function InfiniteCanvasPage() {
                                 finishGenerationRequest(targetId, controller);
                             }
                             return false;
-                        }),
+                        },
                     );
                     if (count > 1) finishGenerationRequest(rootId, controller);
                     if (controller.signal.aborted) {
@@ -2339,7 +2357,7 @@ function InfiniteCanvasPage() {
                     return;
                 }
 
-                const image = useReferenceImages ? await requestEdit(generationConfig, prompt, retryImages, undefined, { signal: controller.signal }).then((items) => items[0]) : await requestGeneration(generationConfig, prompt, { signal: controller.signal }).then((items) => items[0]);
+                const image = useReferenceImages ? await requestEdit({ ...generationConfig, count: "1" }, prompt, retryImages, undefined, { signal: controller.signal }).then((items) => items[0]) : await requestGeneration({ ...generationConfig, count: "1" }, prompt, { signal: controller.signal }).then((items) => items[0]);
                 const uploadedImage = await uploadImage(image.dataUrl);
                 const imageConfig = NODE_DEFAULT_SIZE[CanvasNodeType.Image];
                 const imageSize = fitNodeSize(uploadedImage.width, uploadedImage.height, imageConfig.width, imageConfig.height);
@@ -2659,6 +2677,7 @@ function InfiniteCanvasPage() {
                     onUpload={(node) => handleUploadRequest(node.id)}
                     onDownload={downloadNodeImage}
                     onSaveAsset={(node) => void saveNodeAsset(node)}
+                    onPublishGallery={(node) => void publishNodeToGallery(node)}
                     onMaskEdit={(node) => setMaskEditNodeId(node.id)}
                     onCrop={(node) => setCropNodeId(node.id)}
                     onSplit={(node) => setSplitNodeId(node.id)}
@@ -2845,6 +2864,8 @@ function CanvasTopBar({
                             items: [
                                 { key: "home", icon: <Home className="size-4" />, label: "主页", onClick: onHome },
                                 { key: "docs", icon: <BookOpen className="size-4" />, label: "文档", onClick: () => window.open(DOCS_URL, "_blank", "noopener,noreferrer") },
+                                { key: "source", icon: <Code2 className="size-4" />, label: "PeterAI 源码（AGPL）", onClick: () => window.open(SOURCE_URL, "_blank", "noopener,noreferrer") },
+                                { key: "upstream", icon: <Code2 className="size-4" />, label: "原项目 Infinite Canvas", onClick: () => window.open(UPSTREAM_SOURCE_URL, "_blank", "noopener,noreferrer") },
                                 { key: "projects", icon: <Images className="size-4" />, label: "我的画布", onClick: onProjects },
                                 { type: "divider" },
                                 { key: "new", icon: <Plus className="size-4" />, label: "新建画布", onClick: onCreateProject },

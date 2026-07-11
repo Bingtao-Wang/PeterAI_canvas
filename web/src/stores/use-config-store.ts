@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
+import { getPeterManagedChannels, type PeterPriceTier } from "@/peter/session";
+import { scopedStorageKey } from "@/peter/storage-scope";
 
 export type ApiCallFormat = "openai" | "gemini";
 
@@ -12,6 +14,11 @@ export type ModelChannel = {
     apiKey: string;
     apiFormat: ApiCallFormat;
     models: string[];
+    source?: "manual" | "peterai";
+    keyId?: number;
+    groupId?: number;
+    capabilities?: Partial<Record<ModelCapability, string[]>>;
+    pricesByModel?: Record<string, Partial<Record<PeterPriceTier, number | null>>>;
 };
 
 export type AiConfig = {
@@ -59,27 +66,33 @@ export type ModelCapability = "image" | "video" | "text" | "audio";
 const CHANNEL_MODEL_SEPARATOR = "::";
 const OPENAI_BASE_URL = "https://api.openai.com";
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com";
+const peterChannels = getPeterManagedChannels() as ModelChannel[];
+const initialChannels: ModelChannel[] = peterChannels.length
+    ? peterChannels
+    : [
+          {
+              id: "default",
+              name: "默认渠道",
+              baseUrl: OPENAI_BASE_URL,
+              apiKey: "",
+              apiFormat: "openai",
+              models: ["gpt-image-2", "grok-imagine-video", "gpt-5.5", "gpt-4o-mini-tts"],
+              source: "manual",
+          },
+      ];
+const initialModels = modelOptionsFromChannels(initialChannels);
 
 export const defaultConfig: AiConfig = {
     channelMode: "local",
     baseUrl: OPENAI_BASE_URL,
     apiKey: "",
     apiFormat: "openai",
-    channels: [
-        {
-            id: "default",
-            name: "默认渠道",
-            baseUrl: OPENAI_BASE_URL,
-            apiKey: "",
-            apiFormat: "openai",
-            models: ["gpt-image-2", "grok-imagine-video", "gpt-5.5", "gpt-4o-mini-tts"],
-        },
-    ],
-    model: "default::gpt-image-2",
-    imageModel: "default::gpt-image-2",
-    videoModel: "default::grok-imagine-video",
-    textModel: "default::gpt-5.5",
-    audioModel: "default::gpt-4o-mini-tts",
+    channels: initialChannels,
+    model: modelOptionsByCapability(initialChannels, "image")[0] || initialModels[0] || "",
+    imageModel: modelOptionsByCapability(initialChannels, "image")[0] || "",
+    videoModel: modelOptionsByCapability(initialChannels, "video")[0] || "",
+    textModel: modelOptionsByCapability(initialChannels, "text")[0] || "",
+    audioModel: modelOptionsByCapability(initialChannels, "audio")[0] || "",
     audioVoice: "alloy",
     audioFormat: "mp3",
     audioSpeed: "1",
@@ -89,11 +102,11 @@ export const defaultConfig: AiConfig = {
     videoGenerateAudio: "true",
     videoWatermark: "false",
     systemPrompt: "",
-    models: ["default::gpt-image-2", "default::grok-imagine-video", "default::gpt-5.5", "default::gpt-4o-mini-tts"],
-    imageModels: ["default::gpt-image-2"],
-    videoModels: ["default::grok-imagine-video"],
-    textModels: ["default::gpt-5.5"],
-    audioModels: ["default::gpt-4o-mini-tts"],
+    models: initialModels,
+    imageModels: modelOptionsByCapability(initialChannels, "image"),
+    videoModels: modelOptionsByCapability(initialChannels, "video"),
+    textModels: modelOptionsByCapability(initialChannels, "text"),
+    audioModels: modelOptionsByCapability(initialChannels, "audio"),
     quality: "auto",
     size: "1:1",
     count: "1",
@@ -158,6 +171,16 @@ export function selectableModelsByCapability(config: AiConfig, capability?: Mode
     return config[modelListKey(capability)];
 }
 
+export function modelOptionsByCapability(channels: ModelChannel[], capability: ModelCapability) {
+    return uniqueModelOptions(
+        channels.flatMap((channel) => {
+            const explicit = channel.capabilities?.[capability];
+            const models = explicit || filterModelsByCapability(channel.models, capability);
+            return models.filter((model) => channel.models.includes(model)).map((model) => encodeChannelModel(channel.id, model));
+        }),
+    );
+}
+
 function modelListKey(capability: ModelCapability) {
     return `${capability}Models` as "imageModels" | "videoModels" | "textModels" | "audioModels";
 }
@@ -195,15 +218,18 @@ export const useConfigStore = create<ConfigStore>()(
             clearPromptContinue: () => set({ shouldPromptContinue: false }),
         }),
         {
-            name: CONFIG_STORE_KEY,
-            partialize: (state) => ({ config: state.config, webdav: state.webdav }),
+            name: scopedStorageKey(CONFIG_STORE_KEY),
+            partialize: (state) => ({ config: sanitizePersistedConfig(state.config), webdav: state.webdav }),
             merge: (persisted, current) => {
                 const persistedState = (persisted || {}) as Partial<ConfigStore>;
                 const persistedConfig = (persistedState.config || {}) as Partial<AiConfig>;
                 const persistedWebdav = (persistedState.webdav || {}) as Partial<WebdavSyncConfig>;
                 const config = { ...defaultConfig, ...persistedConfig };
-                if (!Array.isArray(persistedConfig.channels)) config.channels = [];
-                const channels = normalizeChannels(config);
+                const persistedChannels = Array.isArray(persistedConfig.channels) ? persistedConfig.channels.filter((channel) => channel?.source !== "peterai") : [];
+                const managedChannels = getPeterManagedChannels() as ModelChannel[];
+                config.channels = persistedChannels;
+                const manualChannels = normalizeChannels(config).filter((channel) => channel.source !== "peterai");
+                const channels = managedChannels.length ? [...managedChannels, ...manualChannels.filter((channel) => channel.id !== "default" || channel.apiKey.trim())] : manualChannels;
                 const models = modelOptionsFromChannels(channels);
                 return {
                     ...current,
@@ -227,10 +253,10 @@ export const useConfigStore = create<ConfigStore>()(
                         videoGenerateAudio: config.videoGenerateAudio || "true",
                         videoWatermark: config.videoWatermark || "false",
                         canvasImageCount: config.canvasImageCount || "3",
-                        imageModels: Array.isArray(persistedConfig.imageModels) ? normalizeModelList(config.imageModels, channels) : filterModelsByCapability(models, "image"),
-                        videoModels: Array.isArray(persistedConfig.videoModels) ? normalizeModelList(config.videoModels, channels) : filterModelsByCapability(models, "video"),
-                        textModels: Array.isArray(persistedConfig.textModels) ? normalizeModelList(config.textModels, channels) : filterModelsByCapability(models, "text"),
-                        audioModels: Array.isArray(persistedConfig.audioModels) ? normalizeModelList(config.audioModels, channels) : filterModelsByCapability(models, "audio"),
+                        imageModels: mergeCapabilityModels(config.imageModels, channels, "image"),
+                        videoModels: mergeCapabilityModels(config.videoModels, channels, "video"),
+                        textModels: mergeCapabilityModels(config.textModels, channels, "text"),
+                        audioModels: mergeCapabilityModels(config.audioModels, channels, "audio"),
                     },
                 };
             },
@@ -259,6 +285,32 @@ export function createModelChannel(channel?: Partial<ModelChannel>): ModelChanne
         apiKey: channel?.apiKey || "",
         apiFormat,
         models: uniqueRawModels(channel?.models || []),
+        source: channel?.source || "manual",
+        keyId: channel?.keyId,
+        groupId: channel?.groupId,
+        capabilities: channel?.capabilities,
+        pricesByModel: channel?.pricesByModel,
+    };
+}
+
+function mergeCapabilityModels(persisted: string[], channels: ModelChannel[], capability: ModelCapability) {
+    const available = modelOptionsByCapability(channels, capability);
+    const allowed = new Set(available);
+    const kept = normalizeModelList(Array.isArray(persisted) ? persisted : [], channels).filter((model) => allowed.has(model));
+    return uniqueModelOptions([...kept, ...available]);
+}
+
+export function sanitizePersistedConfig(config: AiConfig): AiConfig {
+    const managedApiKeys = new Set(config.channels.filter((channel) => channel.source === "peterai").map((channel) => channel.apiKey).filter(Boolean));
+    const channels = config.channels.map((channel) =>
+        channel.source === "peterai"
+            ? { ...channel, apiKey: "", pricesByModel: undefined }
+            : channel,
+    );
+    return {
+        ...config,
+        channels,
+        apiKey: managedApiKeys.has(config.apiKey) ? "" : config.apiKey,
     };
 }
 

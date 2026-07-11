@@ -13,6 +13,7 @@ import { CanvasResourceMentionTextarea } from "./canvas-resource-mention-textare
 import { CanvasVideoSettingsPopover } from "./canvas-video-settings-popover";
 import { CanvasNodeType, type CanvasGenerationMode, type CanvasNodeData } from "@/types/canvas";
 import type { CanvasResourceReference } from "@/lib/canvas/canvas-resource-references";
+import { estimatePeterImageCost, formatPeterImageEstimate } from "@/peter/pricing";
 
 export type CanvasNodeGenerationMode = CanvasGenerationMode;
 
@@ -37,6 +38,7 @@ export function CanvasNodePromptPanel({ node, isRunning, onPromptChange, onConfi
     const hasImageContent = node.type === CanvasNodeType.Image && Boolean(node.metadata?.content);
     const isEditingExistingContent = hasTextContent || hasImageContent;
     const [prompt, setPrompt] = useState(isEditingExistingContent ? "" : node.metadata?.prompt || "");
+    const priceText = mode === "image" ? formatPeterImageEstimate(estimatePeterImageCost(config)) : "";
 
     useEffect(() => {
         setPrompt(isEditingExistingContent ? "" : node.metadata?.prompt || "");
@@ -72,6 +74,7 @@ export function CanvasNodePromptPanel({ node, isRunning, onPromptChange, onConfi
                 placeholder={promptPlaceholder(mode, hasImageContent, hasTextContent)}
             />
 
+            {priceText ? <div className="mt-2 text-[11px] opacity-60">{priceText}</div> : null}
             <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
                     <CanvasPromptLibrary onSelect={updatePrompt} />

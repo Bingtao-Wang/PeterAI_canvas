@@ -24,6 +24,14 @@
 
 无限画布是一款面向图片创作的开源工作台。它把画布编排、AI 图片生成、参考图编辑、对话助手、提示词库和素材沉淀放在同一个界面里，适合用来探索视觉方案并连续迭代图片结果。
 
+## PeterAI Fork
+
+本仓库的 `custom/peterai` 分支是 PeterAI 的独立生产 fork，生产域名固定为 `https://canvas.peterai.cc.cd`。它保留原项目能力和作者标识，并增加 PeterAI 登录接入、托管渠道、动态图片价格、用户级本地数据隔离、Gallery 发布及受限 API 代理。
+
+- 上游项目：<https://github.com/basketikun/infinite-canvas>
+- PeterAI 维护规则：[PETER_FORK_MAINTENANCE.md](PETER_FORK_MAINTENANCE.md)
+- 开源协议：AGPL-3.0；公开服务对应源码以生产页面链接的 commit 为准。
+
 > [!CAUTION]
 > 项目目前处于开发阶段，不保证历史数据兼容。各种本地存储格式都可能直接调整，欢迎关注后续更新，当前更适合个人/本地部署，不建议直接公网多人共用。
 >

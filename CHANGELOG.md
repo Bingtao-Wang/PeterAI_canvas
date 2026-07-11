@@ -2,6 +2,10 @@
 
 ## Unreleased
 
++ [新增] 新增 PeterAI 独立认证启动、托管 Key/模型自动配置、按用户隔离的本地存储和嵌入模式。
++ [新增] 新增 PeterAI 动态图片价格、单图任务四并发队列、固定尺寸适配和画布节点发布 Gallery。
++ [新增] 新增受限 `/peter-api` 反向代理、独立 Docker 发布、生产验收、公开源码和双 fork 维护流程。
+
 + [优化] 本地 Agent 连接说明明确区分插件 / 手动 MCP 才会增加 Codex token 消耗，直接运行 Agent 不受影响。
 + [优化] 优化本地 Agent 连接说明，区分 Codex 插件启动和直接运行 Agent 两种方式。
 + [新增] Agent 对话消息改用 streamdown 流式渲染，提升长回复与 Markdown 内容展示效果。

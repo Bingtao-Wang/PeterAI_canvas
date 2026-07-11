@@ -1,9 +1,8 @@
 services:
   app:
-    image: infinite-canvas:local
+    image: ${PETERAI_CANVAS_IMAGE:-peterai-canvas:local}
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    network_mode: host
     restart: unless-stopped

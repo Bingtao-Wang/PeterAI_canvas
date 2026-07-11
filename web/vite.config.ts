@@ -22,4 +22,13 @@ export default defineConfig({
         __APP_VERSION__: JSON.stringify(localVersion),
         __APP_RELEASES__: JSON.stringify(parseChangelog(localChangelog)),
     },
+    server: {
+        proxy: {
+            "/peter-api": {
+                target: "http://127.0.0.1:18080",
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/peter-api/, ""),
+            },
+        },
+    },
 });

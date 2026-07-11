@@ -58,6 +58,7 @@ export type CanvasNodeMetadata = {
     bytes?: number;
     durationMs?: number;
     groupId?: string;
+    galleryItemId?: number;
 };
 
 export type CanvasNodeData = {

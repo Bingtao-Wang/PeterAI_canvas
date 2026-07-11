@@ -45,7 +45,8 @@ export function AppTopNav() {
                                         WebkitMask: "url(/logo.svg) center / contain no-repeat",
                                     }}
                                 />
-                                <span className="text-base font-medium">无限画布</span>
+                                <span className="text-base font-medium">PeterAI 画布</span>
+                                <span className="hidden text-[10px] font-normal text-stone-400 lg:inline">Infinite Canvas</span>
                             </Link>
 
                             <button

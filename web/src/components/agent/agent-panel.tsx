@@ -7,6 +7,7 @@ import { CanvasLocalAgentPanel } from "@/components/canvas/canvas-local-agent-pa
 import { canvasThemes } from "@/lib/canvas-theme";
 import { CANVAS_AGENT_PANEL_MOTION_MS, useAgentStore } from "@/stores/use-agent-store";
 import { useThemeStore } from "@/stores/use-theme-store";
+import { scopedStorageKey } from "@/peter/storage-scope";
 
 const PANEL_MOTION_SECONDS = CANVAS_AGENT_PANEL_MOTION_MS / 1000;
 
@@ -32,7 +33,7 @@ export function AgentPanel() {
             setAgentState({ width: nextWidth });
         };
         const onUp = () => {
-            localStorage.setItem("canvas-agent-panel-width", String(nextWidth));
+            localStorage.setItem(scopedStorageKey("canvas-agent-panel-width"), String(nextWidth));
             window.removeEventListener("pointermove", onMove);
             window.removeEventListener("pointerup", onUp);
             setResizing(false);

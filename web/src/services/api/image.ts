@@ -6,6 +6,8 @@ import { dataUrlToFile } from "@/lib/image-utils";
 import { buildImageReferencePromptText } from "@/lib/image-reference-prompt";
 import { imageToDataUrl } from "@/services/image-storage";
 import type { ReferenceImage } from "@/types/image";
+import { normalizePeterImageRequestSize } from "@/peter/image-size";
+import { PETER_IMAGE_MAX_CONCURRENCY, runImageTask, runWithConcurrency } from "@/peter/concurrency";
 
 export type AiTextMessage = {
     role: "system" | "user" | "assistant";
@@ -612,8 +614,7 @@ function parseGeminiToolResponse(payload: GeminiPayload): ToolResponseResult {
 }
 
 async function requestGeminiImages(config: AiConfig, prompt: string, references: ReferenceImage[], count: number, options?: RequestOptions) {
-    const requests = Array.from({ length: count }, () => requestGeminiImagesOnce(config, prompt, references, options));
-    return (await Promise.all(requests)).flat();
+    return (await runWithConcurrency(Array.from({ length: count }), PETER_IMAGE_MAX_CONCURRENCY, () => requestGeminiImagesOnce(config, prompt, references, options))).flat();
 }
 
 async function requestGeminiImagesOnce(config: AiConfig, prompt: string, references: ReferenceImage[], options?: RequestOptions) {
@@ -621,13 +622,15 @@ async function requestGeminiImagesOnce(config: AiConfig, prompt: string, referen
     for (const image of references) {
         parts.push(toGeminiImagePart(await imageToDataUrl(image)));
     }
-    const response = await axios.post<GeminiPayload>(
-        geminiApiUrl(config, "generateContent"),
-        {
-            ...toGeminiBody(config, [{ role: "user", content: prompt }], { generationConfig: { responseModalities: ["TEXT", "IMAGE"], ...resolveGeminiImageConfig(config) } }),
-            contents: [{ role: "user", parts }],
-        },
-        { headers: geminiHeaders(config), signal: options?.signal },
+    const response = await runImageTask(() =>
+        axios.post<GeminiPayload>(
+            geminiApiUrl(config, "generateContent"),
+            {
+                ...toGeminiBody(config, [{ role: "user", content: prompt }], { generationConfig: { responseModalities: ["TEXT", "IMAGE"], ...resolveGeminiImageConfig(config) } }),
+                contents: [{ role: "user", parts }],
+            },
+            { headers: geminiHeaders(config), signal: options?.signal },
+        ),
     );
     return parseGeminiImagePayload(response.data);
 }
@@ -659,25 +662,34 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
         }
     }
     const quality = normalizeQuality(config.quality);
-    const requestSize = resolveRequestSize(quality, config.size);
+    const requestSize = normalizeManagedRequestSize(requestConfig, resolveRequestSize(quality, config.size));
     try {
-        const response = await axios.post<ImageApiResponse>(
-            aiApiUrl(requestConfig, "/images/generations"),
-            {
-                model: requestConfig.model,
-                prompt: withSystemPrompt(requestConfig, prompt),
-                n,
-                ...(quality ? { quality } : {}),
-                ...(requestSize ? { size: requestSize } : {}),
-                response_format: "b64_json",
-                output_format: IMAGE_OUTPUT_FORMAT,
-            },
-            {
-                headers: aiHeaders(requestConfig, "application/json"),
-                signal: options?.signal,
-            },
-        );
-        const images = parseImagePayload(response.data);
+        const errors: unknown[] = [];
+        const batches = await runWithConcurrency(Array.from({ length: n }), PETER_IMAGE_MAX_CONCURRENCY, async () => {
+            try {
+                const response = await runImageTask(() =>
+                    axios.post<ImageApiResponse>(
+                        aiApiUrl(requestConfig, "/images/generations"),
+                        {
+                            model: requestConfig.model,
+                            prompt: withSystemPrompt(requestConfig, prompt),
+                            n: 1,
+                            ...(quality ? { quality } : {}),
+                            ...(requestSize ? { size: requestSize } : {}),
+                            response_format: "b64_json",
+                            output_format: IMAGE_OUTPUT_FORMAT,
+                        },
+                        { headers: aiHeaders(requestConfig, "application/json"), signal: options?.signal },
+                    ),
+                );
+                return parseImagePayload(response.data);
+            } catch (error) {
+                errors.push(error);
+                return [];
+            }
+        });
+        const images = batches.flat();
+        if (!images.length && errors.length) throw errors[0];
         return images;
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
@@ -697,30 +709,41 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
         }
     }
     const quality = normalizeQuality(config.quality);
-    const requestSize = resolveRequestSize(quality, config.size);
-    const formData = new FormData();
-    formData.set("model", requestConfig.model);
-    formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
-    formData.set("n", String(n));
-    formData.set("response_format", "b64_json");
-    formData.set("output_format", IMAGE_OUTPUT_FORMAT);
-    if (quality) {
-        formData.set("quality", quality);
-    }
-    if (requestSize) {
-        formData.set("size", requestSize);
-    }
+    const requestSize = normalizeManagedRequestSize(requestConfig, resolveRequestSize(quality, config.size));
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-    files.forEach((file) => formData.append("image", file));
-    if (mask) formData.set("mask", dataUrlToFile(mask));
+    const maskFile = mask ? dataUrlToFile(mask) : null;
 
     try {
-        const response = await axios.post<ImageApiResponse>(aiApiUrl(requestConfig, "/images/edits"), formData, { headers: aiHeaders(requestConfig), signal: options?.signal });
-        const images = parseImagePayload(response.data);
+        const errors: unknown[] = [];
+        const batches = await runWithConcurrency(Array.from({ length: n }), PETER_IMAGE_MAX_CONCURRENCY, async () => {
+            const formData = new FormData();
+            formData.set("model", requestConfig.model);
+            formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
+            formData.set("n", "1");
+            formData.set("response_format", "b64_json");
+            formData.set("output_format", IMAGE_OUTPUT_FORMAT);
+            if (quality) formData.set("quality", quality);
+            if (requestSize) formData.set("size", requestSize);
+            files.forEach((file) => formData.append("image", file));
+            if (maskFile) formData.set("mask", maskFile);
+            try {
+                const response = await runImageTask(() => axios.post<ImageApiResponse>(aiApiUrl(requestConfig, "/images/edits"), formData, { headers: aiHeaders(requestConfig), signal: options?.signal }));
+                return parseImagePayload(response.data);
+            } catch (error) {
+                errors.push(error);
+                return [];
+            }
+        });
+        const images = batches.flat();
+        if (!images.length && errors.length) throw errors[0];
         return images;
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
     }
+}
+
+function normalizeManagedRequestSize(config: Pick<AiConfig, "baseUrl" | "model">, requestSize: string | undefined) {
+    return config.baseUrl.includes("/peter-api") ? normalizePeterImageRequestSize(config.model, requestSize) : requestSize;
 }
 
 export async function requestImageQuestion(config: AiConfig, messages: AiTextMessage[], onDelta: (text: string) => void, options?: RequestOptions) {

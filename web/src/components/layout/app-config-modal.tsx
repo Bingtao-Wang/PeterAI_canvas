@@ -8,7 +8,8 @@ import { syncAppDataToWebdav, type AppSyncDomainKey, type AppSyncProgressEvent }
 import { testWebdavConnection, WEBDAV_MANIFEST_FILE_NAME } from "@/services/webdav-sync";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
 import { useAgentStore } from "@/stores/use-agent-store";
-import { createModelChannel, defaultBaseUrlForApiFormat, filterModelsByCapability, modelOptionLabel, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
+import { scopedStorageKey } from "@/peter/storage-scope";
+import { createModelChannel, defaultBaseUrlForApiFormat, modelOptionLabel, modelOptionsByCapability, modelOptionsFromChannels, normalizeModelOptionValue, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -224,8 +225,8 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
 
     const updateAgentConfig = (patch: { url?: string; token?: string }) => {
         setAgentState({ ...patch, connectError: "" });
-        if (patch.url !== undefined) localStorage.setItem("canvas-agent-url", patch.url.trim().replace(/\/$/, ""));
-        if (patch.token !== undefined) localStorage.setItem("canvas-agent-token", patch.token);
+        if (patch.url !== undefined) localStorage.setItem(scopedStorageKey("canvas-agent-url"), patch.url.trim().replace(/\/$/, ""));
+        if (patch.token !== undefined) localStorage.setItem(scopedStorageKey("canvas-agent-token"), patch.token);
     };
 
     const toggleAgentConnection = () => (agentEnabled ? disconnectAgent({ connectError: "" }) : connectAgent());
@@ -268,16 +269,25 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                                 <div className="min-w-0">
                                                     <div className="truncate text-sm font-semibold">{channel.name || "未命名渠道"}</div>
                                                     <div className="mt-1 text-xs text-stone-500">
-                                                        {apiFormatLabel(channel.apiFormat)} · 已保存 {channel.models.length} 个模型
+                                                        {channel.source === "peterai" ? "PeterAI 托管" : apiFormatLabel(channel.apiFormat)} · 已保存 {channel.models.length} 个模型
                                                     </div>
                                                 </div>
                                                 <div className="flex shrink-0 gap-2">
-                                                    <Button size="small" loading={loadingChannelId === channel.id} onClick={() => void refreshChannelModels(channel)}>
-                                                        拉取模型
-                                                    </Button>
-                                                    <Button size="small" danger icon={<Trash2 className="size-3.5" />} onClick={() => deleteChannel(channel.id)} />
+                                                    {channel.source !== "peterai" ? (
+                                                        <>
+                                                            <Button size="small" loading={loadingChannelId === channel.id} onClick={() => void refreshChannelModels(channel)}>
+                                                                拉取模型
+                                                            </Button>
+                                                            <Button size="small" danger icon={<Trash2 className="size-3.5" />} onClick={() => deleteChannel(channel.id)} />
+                                                        </>
+                                                    ) : null}
                                                 </div>
                                             </div>
+                                            {channel.source === "peterai" ? (
+                                                <div className="rounded-md bg-stone-50 px-3 py-2 text-xs leading-5 text-stone-500 dark:bg-stone-900">
+                                                    Key #{channel.keyId} · 分组 #{channel.groupId} · API Key 仅保存在本次浏览器会话内，刷新时由 PeterAI 重新授权加载。
+                                                </div>
+                                            ) : (
                                             <div className="grid gap-4 md:grid-cols-2">
                                                 <Form.Item label="渠道名称" className="mb-0">
                                                     <Input value={channel.name} onChange={(event) => updateChannel(channel.id, { name: event.target.value })} />
@@ -295,6 +305,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                                     <Select mode="tags" showSearch allowClear maxTagCount="responsive" placeholder="输入模型名，或点击拉取模型" value={channel.models} onChange={(models) => updateChannel(channel.id, { models })} />
                                                 </Form.Item>
                                             </div>
+                                            )}
                                         </section>
                                     ))}
                                 </div>
@@ -523,10 +534,10 @@ export function AppConfigModal() {
 
 function withChannels(config: AiConfig, channels: ModelChannel[]): AiConfig {
     const models = modelOptionsFromChannels(channels);
-    const imageModels = keepOrSuggest(config.imageModels, filterModelsByCapability(models, "image"), models);
-    const videoModels = keepOrSuggest(config.videoModels, filterModelsByCapability(models, "video"), models);
-    const textModels = keepOrSuggest(config.textModels, filterModelsByCapability(models, "text"), models);
-    const audioModels = keepOrSuggest(config.audioModels, filterModelsByCapability(models, "audio"), models);
+    const imageModels = keepOrSuggest(config.imageModels, modelOptionsByCapability(channels, "image"), models);
+    const videoModels = keepOrSuggest(config.videoModels, modelOptionsByCapability(channels, "video"), models);
+    const textModels = keepOrSuggest(config.textModels, modelOptionsByCapability(channels, "text"), models);
+    const audioModels = keepOrSuggest(config.audioModels, modelOptionsByCapability(channels, "audio"), models);
     return {
         ...config,
         channels,
