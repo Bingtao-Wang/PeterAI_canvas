@@ -7,6 +7,7 @@
 + [新增] 新增受限 `/peter-api` 反向代理、独立 Docker 发布、生产验收、公开源码和双 fork 维护流程。
 + [修复] PeterAI Grok 视频改用 Sub2API 已验证的 JSON 创建契约，并兼容 `request_id`、`done` 和嵌套视频 URL 响应。
 + [新增] PeterAI 托管渠道新增 Audio Speech 与 Seedance 模型分类，统一经 Sub2API 路由和站内计费；用户手工 URL/API Key 渠道继续保留。
++ [修复] 手工填写 PeterAI API 域名时自动使用同源 `/peter-api`，避免浏览器 CORS 失败；PeterAI 嵌入页不再默认弹出可选本地 Agent，并明确区分 Agent token 与 API Key。
 
 + [优化] 本地 Agent 连接说明明确区分插件 / 手动 MCP 才会增加 Codex token 消耗，直接运行 Agent 不受影响。
 + [优化] 优化本地 Agent 连接说明，区分 Codex 插件启动和直接运行 Agent 两种方式。

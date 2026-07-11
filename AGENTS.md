@@ -81,4 +81,4 @@
 - 当前 AI API Key 存在浏览器本地，并由前端直接请求 OpenAI 兼容接口；涉及安全说明时要写清楚。
 - Docker 静态资源路径目前仍是待办项，文档中不要过度承诺生产部署已经完全验证。
 - PeterAI 生产 fork 不提供独立注册/登录，必须先验证 PeterAI JWT 才能初始化业务存储；不得增加 Canvas 自有用户体系。
-- PeterAI 托管 Key 只驻留运行时内存，托管模型只经同源 `/peter-api` 进入 Sub2API；用户手工配置自己的 URL/API Key 能力必须保留，并与托管渠道明确区分。
+- PeterAI 托管 Key 只驻留运行时内存，托管模型只经同源 `/peter-api` 进入 Sub2API；用户手工配置自己的 URL/API Key 能力必须保留，并与托管渠道明确区分。手工第三方域名保持直连，已知 PeterAI API 域名必须归一化到 `/peter-api`。

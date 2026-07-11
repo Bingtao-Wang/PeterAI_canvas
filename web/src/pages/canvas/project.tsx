@@ -61,6 +61,7 @@ import {
 import type { ReferenceImage } from "@/types/image";
 import type { ReferenceAudio } from "@/types/media";
 import { publishCanvasImage } from "@/peter/gallery";
+import { getPeterSession } from "@/peter/session";
 
 type CanvasClipboard = {
     nodes: CanvasNodeData[];
@@ -428,7 +429,7 @@ function InfiniteCanvasPage() {
 
     useEffect(() => {
         if (!projectLoaded || !["new", "recent", "choose"].includes(searchParams.get("mode") || "")) return;
-        if (!searchParams.has("agentUrl")) openAgentPanel();
+        if (!getPeterSession()?.embedded && !searchParams.has("agentUrl")) openAgentPanel();
     }, [openAgentPanel, projectLoaded, searchParams]);
 
     useEffect(() => {

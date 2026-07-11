@@ -422,11 +422,24 @@ function uniqueModelOptions(models: string[]) {
 }
 
 export function buildApiUrl(baseUrl: string, path: string) {
-    let normalizedBaseUrl = baseUrl.trim().replace(/\/+$/, "");
+    let normalizedBaseUrl = normalizePeterAiApiBaseUrl(baseUrl.trim().replace(/\/+$/, ""));
     normalizedBaseUrl = normalizeArkPlanBaseUrl(normalizedBaseUrl);
     const lowerBaseUrl = normalizedBaseUrl.toLowerCase();
     const apiBaseUrl = lowerBaseUrl.endsWith("/v1") || lowerBaseUrl.endsWith("/api/v3") || lowerBaseUrl.endsWith("/api/plan/v3") ? normalizedBaseUrl : `${normalizedBaseUrl}/v1`;
     return `${apiBaseUrl}${path}`;
+}
+
+export function normalizePeterAiApiBaseUrl(baseUrl: string) {
+    try {
+        const url = new URL(baseUrl);
+        const origin = url.origin.toLowerCase();
+        const path = url.pathname.replace(/\/+$/, "").toLowerCase();
+        if (!["https://api.peterai.cc.cd", "https://api.peteraix.com"].includes(origin)) return baseUrl;
+        if (path && path !== "/v1") return baseUrl;
+        return "/peter-api";
+    } catch {
+        return baseUrl;
+    }
 }
 
 function normalizeArkPlanBaseUrl(baseUrl: string) {

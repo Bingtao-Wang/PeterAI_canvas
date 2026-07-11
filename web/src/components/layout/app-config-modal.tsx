@@ -462,6 +462,11 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                     </div>
 
                                     <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                                        <div className="font-semibold">这是可选的本地 Agent，不是 PeterAI API 设置</div>
+                                        <div className="mt-1">没有在当前电脑启动 Canvas Agent 时无需连接；请勿在 Local URL 或 Connect token 中填写 PeterAI URL、JWT 或 API Key。</div>
+                                    </div>
+
+                                    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
                                         <div className="font-semibold">Codex 插件提醒</div>
                                         <div className="mt-1">只有安装 Codex 插件或手动添加 MCP 后，工具列表才会进入 Codex 上下文并增加 token 消耗；仅运行 `npx -y @basketikun/canvas-agent` 启动本地 Agent 不会安装 MCP。</div>
                                         <code className="mt-2 block overflow-x-auto rounded bg-white/70 px-2 py-1.5 text-[11px] text-amber-900 dark:bg-black/20 dark:text-amber-100">移除插件：{codexPluginRemoveCommand}</code>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig, mergeCapabilityModels, sanitizePersistedConfig } from "@/stores/use-config-store";
+import { buildApiUrl, defaultConfig, mergeCapabilityModels, sanitizePersistedConfig } from "@/stores/use-config-store";
 
 describe("PeterAI managed channel persistence", () => {
     it("removes managed API keys while retaining manual third-party keys", () => {
@@ -34,5 +34,11 @@ describe("PeterAI managed channel persistence", () => {
 
         expect(mergeCapabilityModels([], channels, "text")).toEqual(["peter-1::gpt-5.5"]);
         expect(mergeCapabilityModels(["peter-1::verified-unknown"], channels, "text")).toEqual(["peter-1::verified-unknown", "peter-1::gpt-5.5"]);
+    });
+
+    it("routes manually entered PeterAI URLs through the same-origin allowlisted proxy", () => {
+        expect(buildApiUrl("https://api.peterai.cc.cd/v1", "/models")).toBe("/peter-api/v1/models");
+        expect(buildApiUrl("https://api.peteraix.com", "/responses")).toBe("/peter-api/v1/responses");
+        expect(buildApiUrl("https://example.com/v1", "/models")).toBe("https://example.com/v1/models");
     });
 });

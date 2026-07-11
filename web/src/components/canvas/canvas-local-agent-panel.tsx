@@ -661,6 +661,11 @@ function AgentConnectView({ theme, url, token, enabled, connected, activity, con
                 </div>
 
                 <div className="rounded-lg border px-3 py-2.5 text-xs leading-5" style={{ borderColor: theme.node.stroke, color: theme.node.muted }}>
+                    <div className="font-medium" style={{ color: theme.node.text }}>可选本地功能，不是 PeterAI API 设置</div>
+                    <div className="mt-1">未在当前电脑运行 Canvas Agent 时，连接失败是正常状态，不影响画布和 AI 生成。这里不要填写 PeterAI URL、JWT 或 API Key。</div>
+                </div>
+
+                <div className="rounded-lg border px-3 py-2.5 text-xs leading-5" style={{ borderColor: theme.node.stroke, color: theme.node.muted }}>
                     <div className="font-medium" style={{ color: theme.node.text }}>Codex 插件提醒</div>
                     <div className="mt-1">只有安装 Codex 插件或手动添加 MCP 后，工具列表才会进入 Codex 上下文并增加 token 消耗；仅运行 `npx -y @basketikun/canvas-agent` 启动本地 Agent 不会安装 MCP。</div>
                     <div className="mt-2 grid gap-1.5">
@@ -689,7 +694,7 @@ function AgentConnectView({ theme, url, token, enabled, connected, activity, con
                                 </span>
                             </div>
                             <div className="mt-1 text-xs leading-5" style={{ color: theme.node.muted }}>
-                                默认自动读取 Local URL 和 Connect token，失败时再手动填写。
+                                仅连接当前电脑上的 Canvas Agent；不是 PeterAI API 配置入口。
                             </div>
                         </div>
                         <Button className="!h-8 !px-3" type={enabled ? "default" : "primary"} icon={<PlugZap className="size-4" />} onClick={onToggleEnabled}>
